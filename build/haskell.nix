@@ -19,6 +19,11 @@ let
   } else {};
 
   #----
+  stratosphereSrc = fetchGit {
+    url = https://github.com/freckle/stratosphere;
+    rev = "64e7bfb3abcad278e6160cd411abdd21a485a671";
+  };
+
   platformTypesSrc   = ../platform-types;
   platformDSLSrc     = ../platform-dsl;
   platformAWSSrc     = ../platform-aws;
@@ -27,6 +32,7 @@ let
   platformVisualSrc  = ../platform-visual;
 
   projectPackages = hspkgs: {
+    stratosphere     = hspkgs.callCabal2nix "stratosphere"    "${stratosphereSrc}" {};
     platform-types   = hspkgs.callCabal2nix "platform-types"  "${platformTypesSrc}" {};
     platform-dsl     = hspkgs.callCabal2nix "platform-sdl"    "${platformDSLSrc}" {};
     platform-aws     = hspkgs.callCabal2nix "platform-aws"    "${platformAWSSrc}" {};

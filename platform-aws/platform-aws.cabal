@@ -27,6 +27,8 @@ library
                      , data-default
                      , text
                      , free
+                     , mtl
+                     , exceptions
                      , stratosphere
                      , platform-types
                      , platform-dsl
@@ -51,8 +53,11 @@ executable platform-aws
   -- other-extensions:
   build-depends:       base
                      , bytestring
+                     , data-default
                      , aeson
                      , optparse-applicative
+                     , mtl
+                     , stratosphere
                      , platform-types
                      , platform-dsl
                      , platform-aws
