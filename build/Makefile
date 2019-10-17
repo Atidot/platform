@@ -15,3 +15,5 @@ notebook:
 docker:
 	nix-build ${NIX_FLAGS} docker.nix -o docker.tar.gz
 
+static:
+	nix-build ${NIX_FLAGS} static.nix
