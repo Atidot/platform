@@ -4,21 +4,13 @@
 }:
 with nixpkgs;
 let
-  isGHCJS = lib.hasPrefix "ghcjs" compiler;
-  ease = package: haskell.lib.doJailbreak (haskell.lib.dontHaddock (haskell.lib.dontCheck package));
+  ease = package: with haskell.lib;
+    ( doJailbreak
+    ( dontHaddock
+    ( dontCheck
+    ( package
+    ))));
 
-  #----
-  fixesGHCJS = hspkgs: if isGHCJS then {
-    lens             = ease hspkgs.lens;
-    comonad          = ease hspkgs.comonad;
-    semigroupoids    = ease hspkgs.semigroupoids;
-    QuickCheck       = ease hspkgs.QuickCheck;
-    tasty-quickcheck = ease hspkgs.tasty-quickcheck;
-    scientific       = ease hspkgs.scientific;
-    temporary        = ease hspkgs.temporary;
-  } else {};
-
-  #----
   stratosphereSrc = fetchGit {
     url = https://github.com/freckle/stratosphere;
     rev = "64e7bfb3abcad278e6160cd411abdd21a485a671";
@@ -34,17 +26,16 @@ let
   projectPackages = hspkgs: {
     stratosphere     = hspkgs.callCabal2nix "stratosphere"    "${stratosphereSrc}" {};
     platform-types   = hspkgs.callCabal2nix "platform-types"  "${platformTypesSrc}" {};
-    platform-dsl     = hspkgs.callCabal2nix "platform-sdl"    "${platformDSLSrc}" {};
+    platform-dsl     = hspkgs.callCabal2nix "platform-dsl"    "${platformDSLSrc}" {};
     platform-aws     = hspkgs.callCabal2nix "platform-aws"    "${platformAWSSrc}" {};
     platform-kube    = hspkgs.callCabal2nix "platform-kube"   "${platformKubeSrc}" {};
-    platform-process = hspkgs.callCabal2nix "platform-proess" "${platformProcessSrc}" {};
+    platform-process = hspkgs.callCabal2nix "platform-process" "${platformProcessSrc}" {};
     platform-visual  = hspkgs.callCabal2nix "platform-visual" "${platformVisualSrc}" {};
   };
 in
 haskellPackages.override (old: {
   overrides = pkgs.lib.composeExtensions old.overrides
     (self: hspkgs:
-      fixesGHCJS hspkgs
-   // projectPackages hspkgs
+      projectPackages hspkgs
     );
 })
