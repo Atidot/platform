@@ -4,7 +4,10 @@ build:
 	nix-build ${NIX_FLAGS}
 
 build-js:
-	nix-build ${NIX_FLAGS} --arg compiler \"ghcjs\"
+	nix-build ${NIX_FLAGS} nodejs.nix
+
+build-static:
+	nix-build ${NIX_FLAGS} static.nix
 
 shell:
 	nix-shell ${NIX_FLAGS}
@@ -15,5 +18,3 @@ notebook:
 docker:
 	nix-build ${NIX_FLAGS} docker.nix -o docker.tar.gz
 
-static:
-	nix-build ${NIX_FLAGS} static.nix
