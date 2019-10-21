@@ -1,7 +1,6 @@
 { nixpkgs  ? import <nixpkgs> { config.allowBroken = true; }
 , compiler ? "ghc864"
 }:
-#with nixpkgs;
 let
   staticHaskellNixSrc = fetchGit {
     url = https://github.com/nh2/static-haskell-nix;
@@ -24,6 +23,11 @@ let
            );
 
 
+  haskellPackages' = import ./haskell.nix { inherit compiler;
+                                            nixpkgs = pkgs;
+                                            haskellPackages = survey.haskellPackages;
+                                          };
+
   ease = package: with pkgs.haskell.lib;
     ( doJailbreak
     ( dontHaddock
@@ -31,13 +35,16 @@ let
     ( package
     ))));
 
-  haskellPackages = import ./haskell.nix { inherit compiler;
-                                           nixpkgs = pkgs;
-                                           haskellPackages = survey.haskellPackages;
-                                         };
+  haskellPackages = haskellPackages'.override (old: {
+    overrides = pkgs.lib.composeExtensions old.overrides
+      (self: hspkgs: {
+        tls = ease hspkgs.tls;
+      });
+  });
 
 
-  statify = drv: with pkgs.haskell.lib;
+
+  buildStatic = drv: with pkgs.haskell.lib;
     ( disableSharedExecutables
     ( disableSharedLibraries
     ( nixpkgs.lib.flip appendConfigureFlags
@@ -50,12 +57,12 @@ let
     ))));
 
   haskellEnv = haskellPackages.ghcWithPackages (ps: with ps; [
-    (statify platform-types)
-    (statify platform-dsl)
-    #(statify platform-aws)
-    #(statify platform-kube)
-    #(statify platform-process)
-    (statify platform-visual)
+    (buildStatic platform-types)
+    (buildStatic platform-dsl)
+    (buildStatic platform-aws)
+    (buildStatic platform-kube)
+    (buildStatic platform-process)
+    (buildStatic platform-visual)
   ]);
 
 in
