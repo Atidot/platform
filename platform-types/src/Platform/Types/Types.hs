@@ -32,29 +32,3 @@ data FileID =
     { _fileID_name :: !Text
     }
   deriving (Show, Read, Eq, Ord, Data, Typeable, Generic)
-
-data Container =
-  Container
-    { _container_id :: !ContainerID
-    }
-  deriving (Show, Read, Eq, Ord, Data, Typeable, Generic)
-
-data Queue =
-  Queue
-    { _queue_id :: !QueueID
-    , _queue_origin :: !Container
-    , _queue_destination :: !Container
-    }
-  deriving (Show, Read, Eq, Ord, Data, Typeable, Generic)
-
-data Database =
-  Database
-    { _database_container :: !Container
-    }
-  deriving (Show, Read, Eq, Ord, Data, Typeable, Generic)
-
-data File =
-  File
-    { _file_id :: !FileID
-    }
-  deriving (Show, Read, Eq, Ord, Data, Typeable, Generic)

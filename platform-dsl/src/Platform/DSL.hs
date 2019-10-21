@@ -20,21 +20,20 @@ import "platform-types" Platform.Types
 data PlatformCmd a
     = Container Text (ContainerID -> a)
     | Connection ContainerID ContainerID a
+    | Failure a
     deriving (Typeable, Functor)
 
 type Platform = Free PlatformCmd
 
 makeFree ''PlatformCmd
 
-
 --------------------
-(|-->) = connection
+(|-->) :: PlatformCmd a -> PlatformCmd a -> PlatformCmd a
+(|-->) c@(Container t f) d@(Container t' f') = Connection c d ()
+(|-->) c d = Failure ()
 
 test :: Platform ()
 test = do
-    rest      <- container "atidot/webserver"
-    jobrunner <- container "atidot/jobrunner"
+    rest      <- Container "atidot/webserver" (const ())
+    jobrunner <- Container "atidot/jobrunner" (const ())
     rest |--> jobrunner
-
-
-
