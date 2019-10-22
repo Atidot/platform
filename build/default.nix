@@ -3,7 +3,8 @@
 }:
 with nixpkgs;
 let
-  haskellPackages = import ./haskell.nix { inherit nixpkgs compiler; };
+  haskell = import ./haskell.nix { inherit nixpkgs compiler; };
+  haskellPackages = haskell.packages;
 
   haskellEnv = haskellPackages.ghcWithPackages (ps: with ps; [
     platform-types

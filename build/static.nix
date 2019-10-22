@@ -23,17 +23,13 @@ let
            );
 
 
-  haskellPackages' = import ./haskell.nix { inherit compiler;
-                                            nixpkgs = pkgs;
-                                            haskellPackages = survey.haskellPackages;
-                                          };
+  haskell = import ./haskell.nix { inherit compiler;
+                                           nixpkgs = pkgs;
+                                           haskellPackages = survey.haskellPackages;
+                                 };
+  ease = haskell.ease;
+  haskellPackages' = haskell.packages;
 
-  ease = package: with pkgs.haskell.lib;
-    ( doJailbreak
-    ( dontHaddock
-    ( dontCheck
-    ( package
-    ))));
 
   haskellPackages = haskellPackages'.override (old: {
     overrides = pkgs.lib.composeExtensions old.overrides

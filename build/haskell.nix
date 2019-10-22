@@ -3,7 +3,7 @@
 , haskellPackages ? nixpkgs.haskell.packages.${compiler}
 }:
 with nixpkgs;
-let
+rec {
   ease = package: with haskell.lib;
     ( doJailbreak
     ( dontHaddock
@@ -32,10 +32,11 @@ let
     platform-process = hspkgs.callCabal2nix "platform-process" "${platformProcessSrc}" {};
     platform-visual  = hspkgs.callCabal2nix "platform-visual"  "${platformVisualSrc}" {};
   };
-in
-haskellPackages.override (old: {
-  overrides = pkgs.lib.composeExtensions old.overrides
-    (self: hspkgs:
-      projectPackages hspkgs
-    );
-})
+
+  packages = haskellPackages.override (old: {
+    overrides = pkgs.lib.composeExtensions old.overrides
+      (self: hspkgs:
+        projectPackages hspkgs
+      );
+  });
+}

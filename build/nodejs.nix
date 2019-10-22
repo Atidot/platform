@@ -3,14 +3,9 @@
 }:
 with nixpkgs;
 let
-  haskellPackages' = import ./haskell.nix { inherit nixpkgs compiler; };
-
-  ease = package: with haskell.lib;
-    ( doJailbreak
-    ( dontHaddock
-    ( dontCheck
-    ( package
-    ))));
+  haskell = import ./haskell.nix { inherit nixpkgs compiler; };
+  ease    = haskell.ease;
+  haskellPackages' = haskell.packages;
 
   haskellPackages = haskellPackages'.override (old: {
     overrides = pkgs.lib.composeExtensions old.overrides
