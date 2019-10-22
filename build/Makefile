@@ -7,7 +7,7 @@ build-js:
 	nix-build ${NIX_FLAGS} nodejs.nix
 
 build-static:
-	nix-build ${NIX_FLAGS} static.nix
+	nix-build ${NIX_FLAGS} static.nix --show-trace
 
 shell:
 	nix-shell ${NIX_FLAGS}

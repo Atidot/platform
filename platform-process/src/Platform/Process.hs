@@ -1,4 +1,6 @@
 {-# LANGUAGE PackageImports #-}
+{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE FlexibleContexts #-}
 module Platform.Process where
 
 import "base" Control.Monad.IO.Class (MonadIO, liftIO)
@@ -17,8 +19,8 @@ type ProcessConfig = ()
 
 data ProcessState
     = ProcessState
-        { _processState_containers :: [Container]
-        , _processState_connections :: [Connection]
+        { _processState_containers :: [ContainerID]
+        --, _processState_connections :: [Connection] 
         } deriving (Show, Read, Eq)
 makeLenses ''ProcessState
 

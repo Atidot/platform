@@ -28,12 +28,10 @@ type Platform = Free PlatformCmd
 makeFree ''PlatformCmd
 
 --------------------
-(|-->) :: PlatformCmd a -> PlatformCmd a -> PlatformCmd a
-(|-->) c@(Container t f) d@(Container t' f') = Connection c d ()
-(|-->) c d = Failure ()
+(|-->) = connection
 
 test :: Platform ()
 test = do
-    rest      <- Container "atidot/webserver" (const ())
-    jobrunner <- Container "atidot/jobrunner" (const ())
+    rest      <- container "atidot/webserver"
+    jobrunner <- container "atidot/jobrunner"
     rest |--> jobrunner

@@ -24,6 +24,8 @@ library
   build-depends:       base
                      , lens
                      , aeson
+                     , mtl
+                     , exceptions
                      , executor
                      , data-default
                      , text
