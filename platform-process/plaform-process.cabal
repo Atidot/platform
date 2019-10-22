@@ -24,6 +24,7 @@ library
   build-depends:       base
                      , lens
                      , aeson
+                     , executor
                      , data-default
                      , text
                      , free
@@ -51,6 +52,7 @@ executable platform-process
   build-depends:       base
                      , bytestring
                      , aeson
+                     , executor
                      , optparse-applicative
                      , platform-types
                      , platform-dsl
