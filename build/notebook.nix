@@ -5,22 +5,31 @@ with nixpkgs;
 let
   jupyterWith = builtins.fetchGit {
     url = https://github.com/tweag/jupyterWith;
-    rev = "1176b9e8d173f2d2789705ad55c7b53a06155e0f";
+    rev = "097591d0949ebf3645d258c5b1c03dcc59a7afcf";
   };
   nixpkgsPath = jupyterWith + "/nix";
   pkgs = import nixpkgsPath {};
 
-  haskellPackages = import ./haskell.nix
-                  { nixpkgs = pkgs;
-                    haskellPackages = pkgs.haskellPackages;
-                  };
+  haskell = import ./haskell.nix
+                   { nixpkgs = pkgs;
+                     haskellPackages = pkgs.haskellPackages;
+                   };
+  haskellPackages' = haskell.packages;
+  ease = haskell.ease;
+
+  haskellPackages = haskellPackages'.override (old: {
+    overrides = pkgs.lib.composeExtensions old.overrides
+      (self: hspkgs: {
+          stratosphere = nixpkgs.haskell.lib.dontHaddock hspkgs.stratosphere;
+        });
+  });
 
   jupyter = import jupyterWith { pkgs=pkgs; };
 
   ihaskellWithPackages = jupyter.kernels.iHaskellWith {
     #extraIHaskellFlags = "--debug";
     haskellPackages=haskellPackages;
-    name = "platform-env-haskell";
+    name = "platform-env-ihaskell";
     packages = p: with p; [
       platform-types
       platform-dsl

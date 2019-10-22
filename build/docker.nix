@@ -4,7 +4,7 @@ let
   notebook-env = import ./notebook.nix {};
 in
 nixpkgs.dockerTools.buildImage {
-  name = "atidot/language-powerquery";
+  name = "atidot/platform";
   tag = "latest";
   fromImage = dockerTools.pullImage {
     imageName = "ubuntu";
