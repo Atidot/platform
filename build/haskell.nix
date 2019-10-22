@@ -24,6 +24,7 @@ rec {
   platformVisualSrc  = ../platform-visual;
 
   projectPackages = hspkgs: {
+    executor         = ease hspkgs.executor;
     stratosphere     = hspkgs.callCabal2nix "stratosphere"     "${stratosphereSrc}" {};
     platform-types   = hspkgs.callCabal2nix "platform-types"   "${platformTypesSrc}" {};
     platform-dsl     = hspkgs.callCabal2nix "platform-dsl"     "${platformDSLSrc}" {};
