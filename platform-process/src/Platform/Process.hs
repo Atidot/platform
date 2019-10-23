@@ -50,6 +50,14 @@ runProcess config script
 -- switch from run_ (which suppresses stdout) to run (which returns stdout)
 dummyRun :: Sh ()
 dummyRun = do
+    container1 <- startDocker "origin"
+    container2 <- startDocker "destination"
+    run_ [""] -- this represents creating a connection between the two containers
+
+startDocker :: Text -> Sh Text
+startDocker image = do
     pwd' <- pwd
-    dockerID <- run pwd' ["docker", "create", "ubuntu", "bash"]
+    dockerID <- run pwd' ["docker", "create", image]
     run_ ["docker", "start", dockerID]
+    dockerID
+
