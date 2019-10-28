@@ -8,7 +8,7 @@ import "base" Control.Monad.IO.Class (MonadIO, liftIO)
 import "base" Data.Maybe (fromJust)
 import "lens" Control.Lens
 import "data-default" Data.Default (Default, def)
-import "data-text" Data.Text (Text)
+import "data-text" Data.Text (Text, append)
 import "mtl" Control.Monad.State.Class (MonadState, gets)
 import "exceptions" Control.Monad.Catch (MonadMask, bracket)
 import "free" Control.Monad.Free
@@ -50,14 +50,25 @@ runProcess config script
 -- switch from run_ (which suppresses stdout) to run (which returns stdout)
 dummyRun :: Sh ()
 dummyRun = do
-    container1 <- startDocker "origin"
-    container2 <- startDocker "destination"
-    run_ [""] -- this represents creating a connection between the two containers
+    rabbit <- startDockerDefault "rabbitmq"
+    producer <- startDockerLocal "producer"
+    consumer <- startDockerLocal "consumer"
+    return ()
 
-startDocker :: Text -> Sh Text
-startDocker image = do
+startDocker :: [Text] -> Sh ()
+startDocker dockerName = do
     pwd' <- pwd
-    dockerID <- run pwd' ["docker", "create", image]
-    run_ ["docker", "start", dockerID]
-    dockerID
+    run_ pwd' ["docker", "start", dockerName]
 
+startDockerDefault :: Text -> Sh Text
+startDockerDefault image = do
+    pwd' <- pwd
+    run_ pwd' ["docker", "pull", image] -- not currently error-safe
+    dockerID <- run pwd' (["docker", "create"] ++ commands)
+    startDocker [dockerID]
+
+startDockerLocal :: Text -> Sh Text
+startDockerLocal name = do
+    pwd' <- cd (append "../static/testApp/" name)
+    run_ pwd' ["docker", "build", "-t", image]
+    startDocker [name]
