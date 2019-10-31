@@ -12,6 +12,7 @@ let
 
   haskell = import ./haskell.nix
                    { nixpkgs = pkgs;
+                     inherit compiler;
                      haskellPackages = pkgs.haskellPackages;
                    };
   haskellPackages' = haskell.packages;
@@ -20,8 +21,8 @@ let
   haskellPackages = haskellPackages'.override (old: {
     overrides = pkgs.lib.composeExtensions old.overrides
       (self: hspkgs: {
-          stratosphere = nixpkgs.haskell.lib.dontHaddock hspkgs.stratosphere;
-        });
+        stratosphere = nixpkgs.haskell.lib.dontHaddock hspkgs.stratosphere;
+      });
   });
 
   jupyter = import jupyterWith { pkgs=pkgs; };
@@ -31,6 +32,8 @@ let
     haskellPackages=haskellPackages;
     name = "platform-env-ihaskell";
     packages = p: with p; [
+      lens
+      lens-aeson
       platform-types
       platform-dsl
       platform-aws

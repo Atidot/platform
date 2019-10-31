@@ -17,4 +17,3 @@ notebook:
 
 docker:
 	nix-build ${NIX_FLAGS} docker.nix -o docker.tar.gz
-

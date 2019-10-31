@@ -2,6 +2,11 @@
 , compiler ? "ghc864"
 }:
 let
+  happySrc = fetchGit {
+    url = https://github.com/simonmar/happy;
+    rev = "27596ff0ce0171d485bf96d38943ffc760923c90";
+  };
+
   cabal2nixOverlay = self: super:
     { buildPackages = super.buildPackages // {
         cabal2nix = super.haskellPackages.cabal2nix;
@@ -35,12 +40,10 @@ let
   haskellPackages = haskellPackages'.override (old: {
     overrides = pkgs.lib.composeExtensions old.overrides
       (self: hspkgs: {
-        tls      = ease hspkgs.tls;
-        graphviz = ease hspkgs.graphviz;
+        tls             = ease hspkgs.tls;
+        http-client-tls = ease hspkgs.http-client-tls;
       });
   });
-
-
 
   buildStatic = drv: with pkgs.haskell.lib;
     ( disableSharedExecutables
