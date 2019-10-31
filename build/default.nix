@@ -10,6 +10,7 @@ let
     platform-types
     platform-dsl
     platform-aws
+    platform-terraform
     platform-kube
     platform-process
     platform-visual
