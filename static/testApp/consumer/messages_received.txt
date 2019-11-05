@@ -1,0 +1,2 @@
+ERROR:pika.adapters.blocking_connection:Unexpected connection close detected: ConnectionClosedByBroker: (320) "CONNECTION_FORCED - broker forced connection closure with reason 'shutdown'"
+ERROR:pika.adapters.blocking_connection:BlockingConnection.close(200, 'Normal shutdown') called on closed connection.

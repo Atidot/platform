@@ -1,8 +1,15 @@
 import os
 
+def platformCheck():
+    s = os.environ.getenv('PLATFORM_HARNESS', '')
+    if s == '1':
+        return True
+    else:
+        return False
+
 # The harness module provides environment variables and queues
 def consumers():
-    l = os.environ.getenv('ATIDOT_CONSUMERS', list())
+    l = os.environ.getenv('ATIDOT_CONSUMERS', '')
     validateConsumers(l)
     consumerList = list()
     for elt in l:
@@ -19,7 +26,7 @@ def validateConsumers(l):
     pass
 
 def producers():
-    l = os.environ.getenv('ATIDOT_PRODUCERS', list())
+    l = os.environ.getenv('ATIDOT_PRODUCERS', '')
     validateProducers(l)
     producerList = list()
     for elt in l:

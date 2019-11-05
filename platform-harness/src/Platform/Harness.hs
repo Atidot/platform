@@ -2,7 +2,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Platform.Process where
 
-import "data-text" Data.Text (Text)
+import "data-text" Data.Text (Text, append, (<>))
 import "shelly" Shelly
 
 newtype ConsumerProfile = ConsumerProfile ()
@@ -24,9 +24,8 @@ toBash = undefined
 toBash :: ProducerProfile -> Text
 toBash = undefined
 
--- TODO: Actually do this string manipulation.
 varAppend :: Text -> Text -> Text
-varAppend varName newVal = undefined --"export varName=$varName:newVal"
+varAppend varName newVal = "export " <> varName <> "=$" <> varName <> ":" <> newVal
 
 getEnv :: IO Messengers
 getEnv = undefined
