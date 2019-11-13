@@ -42,6 +42,9 @@ instance Default ProcessState where
                        (pure ())
                        platformSetup
 
+-- currently, calls to runProcess call `dummyRun` when atidot/producer is launched,
+-- and otherwise does nothing. I have this at a level of proof-of-concept to see
+-- how to bring Docker, Shelly and Haskell together to launch Python apps.
 runProcess :: (Monad m, MonadState ProcessState m, MonadMask m)
            => ProcessConfig
            -> Platform a
@@ -129,7 +132,6 @@ startDockerLocal image = do
 -- inputs look like "sha256:d0ca3dadf...."
 getDockerID :: Text -> Text
 getDockerID input = Data.Text.drop 7 input
-
 newPath :: Text
 newPath = "$PATH:/home/atidot/platform/static/testDockers/consumer:/home/atidot/platform/static/testDockers/producer"
 platformSetup :: Sh ()
