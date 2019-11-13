@@ -4,7 +4,10 @@ import logging
 def main():
     connection = pika.BlockingConnection(
         pika.ConnectionParameters(host='localhost'))
-    logging.basicConfig(filename='messages_received.txt')
+    logging.basicConfig(
+            filename='messages_received.txt',
+            level=logging.INFO
+    )
     try:
         channel = connection.channel()
         channel.queue_declare(queue='ticks')
@@ -17,7 +20,7 @@ def main():
         connection.close()
 
 def logMsg(ch, method, properties, body):
-    logging.debug(body)
+    logging.info(body)
 
 if __name__ == '__main__':
     main()

@@ -53,6 +53,8 @@ executable platform-process
   -- other-extensions:
   build-depends:       base
                      , bytestring
+                     , data-default
+                     , mtl
                      , aeson
                      , shelly
                      , optparse-applicative

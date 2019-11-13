@@ -35,3 +35,10 @@ test = do
     rest      <- container "atidot/webserver"
     jobrunner <- container "atidot/jobrunner"
     rest |--> jobrunner
+
+-- this is for the simple testing with platform-process
+testPrototype :: Platform ()
+testPrototype = do
+    producer <- container "atidot/producer"
+    consumer <- container "atidot/consumer"
+    producer |--> consumer
