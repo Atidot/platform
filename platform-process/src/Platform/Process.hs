@@ -1,21 +1,23 @@
 {-# LANGUAGE PackageImports #-}
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE FlexibleContexts #-}
 module Platform.Process where
 
-import "base" Control.Monad.IO.Class (MonadIO, liftIO)
-import "base" Data.Maybe (fromJust)
-import "lens" Control.Lens
-import "data-default" Data.Default (Default, def)
-import "text" Data.Text (Text, append, unpack, drop, strip)
-import "mtl" Control.Monad.State.Class (MonadState, gets)
-import "exceptions" Control.Monad.Catch (MonadMask, bracket)
-import "free" Control.Monad.Free
-import "platform-types" Platform.Types
-import "platform-dsl" Platform.DSL
-import "shelly" Shelly
+import           "base"           Control.Monad.IO.Class (MonadIO, liftIO)
+import           "base"           Data.Maybe (fromJust)
+import           "lens"           Control.Lens
+import           "data-default"   Data.Default (Default, def)
+import           "text"           Data.Text (Text, append, unpack, drop, strip)
+import qualified "text"           Data.Text as T
+import           "mtl"            Control.Monad.State.Class (MonadState, gets)
+import           "exceptions"     Control.Monad.Catch (MonadMask, bracket)
+import           "free"           Control.Monad.Free
+import           "platform-types" Platform.Types
+import           "platform-dsl"   Platform.DSL
+import           "shelly"         Shelly
 
 -- TODO: The sequencing in `body` and in `run` has no error-detection.
 
@@ -27,19 +29,19 @@ type ProcessConfig = ()
 -- before the connectionActions begin. 
 data ProcessState
     = ProcessState
-        { _processState_containers :: [ContainerID]
-        , _processState_connections :: [(ContainerID, ContainerID)]
-        , _processState_containerActions :: Sh ()
-        , _processState_connectionActions :: Sh ()
-        , _processState_actions :: Sh ()
+        { _processState_containers :: ![ContainerID]
+        , _processState_connections :: ![(ContainerID, ContainerID)]
+        , _processState_containerActions :: !(Sh ())
+        , _processState_connectionActions :: !(Sh ())
+        , _processState_actions :: !(Sh ())
         } 
 makeLenses ''ProcessState
 
 instance Default ProcessState where
     def = ProcessState []
                        []
-                       (pure ())
-                       (pure ())
+                       (return ())
+                       (return ())
                        platformSetup
 
 -- currently, calls to runProcess call `dummyRun` when atidot/producer is launched,
@@ -85,12 +87,20 @@ runProcess config script
             return'
 
 -- These magic functions should be replaced by some image-selection logic
+producerPath :: Text
 producerPath = "/home/atidot/platform/testDockers/producer"
+
+consumerPath :: Text
 consumerPath = "/home/atidot/platform/testDockers/consumer"
+
+launch :: Text -> Sh ()
 launch "atidot/producer" = dummyLaunch -- startDockerLocal producerPath
 launch "atidot/consumer" = pure () --startDockerLocal consumerPath
 launch _ = undefined
-connect :: Text -> Text -> Sh ()
+
+connect :: Text 
+        -> Text 
+        -> Sh ()
 connect "atidot/producer" "atidot/consumer" = pure ()
 connect _ _ = undefined
 
@@ -131,9 +141,11 @@ startDockerLocal image = do
 -- this should check for well-formed input
 -- inputs look like "sha256:d0ca3dadf...."
 getDockerID :: Text -> Text
-getDockerID input = Data.Text.drop 7 input
+getDockerID input = T.drop 7 input
+
 newPath :: Text
 newPath = "$PATH:/home/atidot/platform/static/testDockers/consumer:/home/atidot/platform/static/testDockers/producer"
+
 platformSetup :: Sh ()
 platformSetup = do
     setenv "PATH" newPath

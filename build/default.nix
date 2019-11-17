@@ -12,6 +12,7 @@ let
     platform-aws
     platform-kube
     platform-process
+    platform-packaging
     platform-visual
   ]);
 
