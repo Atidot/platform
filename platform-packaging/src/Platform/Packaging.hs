@@ -66,11 +66,11 @@ instance Default ContainerEnv where
 toDocker :: ContainerEnv -> Docker ()
 toDocker c = do
     from $ _containerEnv_image c
-    foreach (makeUser _containerEnv_OS c) $ _containerEnv_users c
+    foreach (makeUser $ _containerEnv_OS c) $ _containerEnv_users c
     foreach (uncurry installPkgs) $ _containerEnv_installations c
-    foreach env $ _containerEnv_env c
+    foreach (uncurry env) $ (assocs . _containerEnv_env) c
     foreach run $ _containerEnv_runCmds c
-    doIfJust entrypoint $ _containerEnv_entrypoint c
+    doIfJust (flip entrypoint []) $ _containerEnv_entrypoint c
     doIfJust cmd $ _containerEnv_command c
         where doIfJust f Nothing = return ()
               doIfJust f (Just x) = f x
@@ -84,13 +84,13 @@ foreach f xs = foldl' (>>) (return ()) (map f xs)
 installPkgs :: String
             -> [String] 
             -> Docker ()
-installPkgs installer pkgs = run [installation]
+installPkgs installer pkgs = run installation
     where installation = foldl' (++) (installer ++ endl1) (map instLine pkgs)
           instLine pkg = "    " ++ pkg ++ endl pkg
-          endl pkg     = replicate (maxLength - (paddedLength pkg)) ' ' ++ " \\\n"
+          endl pkg     = replicate (maxLength - paddedLength pkg) ' ' ++ " \\\n"
           paddedLine1  = "RUN " ++ installer ++ " \\"
-          endl1        = replicate (maxLength - (length paddedLine1)) ' ' ++ " \\\n"
-          maxLength    = max $ map length (paddedLine1 : map pad pkgs)
+          endl1        = replicate (maxLength - length paddedLine1) ' ' ++ " \\\n"
+          maxLength    = maximum $ map length (paddedLine1 : map pad pkgs)
           paddedLength = length . pad
           pad pkg      = "    " ++ pkg ++ " \\"
 
