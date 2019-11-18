@@ -50,6 +50,7 @@ instance Default ContainerEnv where
                        "ubuntu:latest" 
                        [] 
                        empty 
+                       []
                        Nothing
                        Nothing
 
@@ -63,14 +64,14 @@ instance Semigroup ContainerEnv where
         -- Note: `env2 <> env1` is not a typo, since Data.Map prefers the left value.
 
 toDocker :: ContainerEnv -> Docker ()
-toDocker env = do
-    from $ _containerEnv_image env
-    foreach makeUser $ _containerEnv_users env
-    foreach installPkgs' $ _containerEnv_installations env
-    foreach export $ _containerEnv_env env
-    foreach run $ _containerEnv_runCmds env
-    doIfJust entrypoint $ _containerEnv_entrypoint env
-    doIfJust cmd $ _containerEnv_command env
+toDocker c = do
+    from $ _containerEnv_image c
+    foreach makeUser $ _containerEnv_users c
+    foreach installPkgs' $ _containerEnv_installations c
+    foreach env $ _containerEnv_env c
+    foreach run $ _containerEnv_runCmds c
+    doIfJust entrypoint $ _containerEnv_entrypoint c
+    doIfJust cmd $ _containerEnv_command c
         where installPkgs' (installer, pkgs) = installPkgs installer pkgs
               doIfJust f Nothing = return ()
               doIfJust f (Just x) = f x
@@ -87,9 +88,9 @@ installPkgs :: String
 installPkgs installer pkgs = run [installation]
     where installation = foldl' (++) (installer ++ endl1) (map instLine pkgs)
           instLine pkg = "    " ++ pkg ++ endl pkg
-          endl pkg     = replicate (maxLength - paddedLength pkg) ' ' ++ " \\\n"
+          endl pkg     = replicate (maxLength - (paddedLength pkg)) ' ' ++ " \\\n"
           paddedLine1  = "RUN " ++ installer ++ " \\"
-          endl1        = replicate (maxLength - length paddedLine1) ' ' ++ " \\\n"
+          endl1        = replicate (maxLength - (length paddedLine1)) ' ' ++ " \\\n"
           maxLength    = max $ map length (paddedLine1 : map pad pkgs)
           paddedLength = length . pad
           pad pkg      = "    " ++ pkg ++ " \\"
