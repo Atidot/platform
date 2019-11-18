@@ -71,7 +71,7 @@ toDocker c = do
     foreach (uncurry env) $ (assocs . _containerEnv_env) c
     foreach run $ _containerEnv_runCmds c
     doIfJust (flip entrypoint []) $ _containerEnv_entrypoint c
-    doIfJust cmd $ _containerEnv_command c
+    doIfJust cmd $ [_containerEnv_command c]
         where doIfJust f Nothing = return ()
               doIfJust f (Just x) = f x
 
@@ -100,9 +100,10 @@ addUserProgram CentOS = "adduser"
 addUserProgram RedHat = "useradd"
 
 makeUser :: OS 
-         -> String 
+         -> User 
          -> Docker ()
-makeUser os uname = do
+makeUser _  Root         = return ()
+makeUser os (User uname) = do
     run (addUserProgram os ++ " " ++ uname)
     user uname
     workdir ("/home/" ++ uname)
