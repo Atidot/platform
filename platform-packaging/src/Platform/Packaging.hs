@@ -24,7 +24,7 @@ data OS = Ubuntu
 
 data User = Root
           | User { _user_name :: !Text }
-          deriving (Show, Read, Eq, Ord, Enum, Bounded, Data, Typeable, Generic)
+          deriving (Show, Read, Eq, Ord, Data, Typeable, Generic)
 
 instance Default User where
     def = Root
