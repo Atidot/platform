@@ -2,6 +2,7 @@
 module Main where
 
 import           "base"                    System.IO (stdin)
+import           "directory"               System.Directory (getCurrentDirectory)
 import qualified "bytestring"              Data.ByteString.Lazy.Char8 as B8 (putStrLn)
 import           "data-default"            Data.Default (Default, def)
 import           "optparse-applicative"    Options.Applicative
@@ -14,4 +15,7 @@ import           "dockerfile"              Data.Docker
 
 
 main :: IO ()
-main = (putStrLn . dockerfile . toDocker) def
+main = do
+    pwd <- getCurrentDirectory
+    let dockerPath = pwd ++ "/DocerfileExample"
+    dockerfileWrite dockerPath $ toDocker def

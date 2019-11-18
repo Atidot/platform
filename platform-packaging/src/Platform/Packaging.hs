@@ -64,14 +64,14 @@ instance Default ContainerEnv where
         -- Note: `env2 <> env1` is not a typo, since Data.Map prefers the left value.
 
 toDocker :: ContainerEnv -> Docker ()
-toDocker c = do
-    from $ _containerEnv_image c
-    foreach (makeUser $ _containerEnv_OS c) $ _containerEnv_users c
-    foreach (uncurry installPkgs) $ _containerEnv_installations c
-    foreach (uncurry env) $ (assocs . _containerEnv_env) c
-    foreach run $ _containerEnv_runCmds c
-    doIfJust (flip entrypoint []) $ _containerEnv_entrypoint c
-    doIfJust cmd $ _containerEnv_command c
+toDocker (ContainerEnv os users img pkgs environment runCmds entrypoint command) = do
+    from img
+    foreach (makeUser os) users
+    foreach (uncurry installPkgs) pkgs
+    foreach (uncurry env) $ assocs environment
+    foreach run  runCmds
+    doIfJust (flip entrypoint []) entrypoint
+    doIfJust cmd command
         where doIfJust f Nothing = return ()
               doIfJust f (Just x) = f x
 
