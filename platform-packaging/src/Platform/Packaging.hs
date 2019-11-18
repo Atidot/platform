@@ -36,7 +36,7 @@ data ContainerEnv
         { _containerEnv_OS :: !OS
         , _containerEnv_users :: ![User]
         , _containerEnv_image :: !String
-        , _containerEnv_installations :: ![(User, String, [String])]
+        , _containerEnv_installations :: ![(String, [String])]
         , _containerEnv_env :: !(Map String String)
         , _containerEnv_runCmds :: ![String]
         , _containerEnv_entrypoint :: !(Maybe Entrypoint)
@@ -57,23 +57,22 @@ instance Default ContainerEnv where
 -- The semigroup operator for ContainerEnv prefers values from the right operand.
 -- I.e. "new" environment variables override old ones, and the new command
 -- overrides the old command. (The "newer" ContainerEnv is the right-hand one.)
-instance Semigroup ContainerEnv where
-    (<>) (ContainerEnv image1 insts1 env1 command1) 
-         (ContainerEnv image2 insts2 env2 command2)
-        = ContainerEnv image2 (insts1 <> insts2) (env2 <> env1) command2
+--instance Semigroup ContainerEnv where
+--    (<>) (ContainerEnv image1 insts1 env1 command1) 
+--         (ContainerEnv image2 insts2 env2 command2)
+--        = ContainerEnv image2 (insts1 <> insts2) (env2 <> env1) command2
         -- Note: `env2 <> env1` is not a typo, since Data.Map prefers the left value.
 
 toDocker :: ContainerEnv -> Docker ()
 toDocker c = do
     from $ _containerEnv_image c
-    foreach makeUser $ _containerEnv_users c
-    foreach installPkgs' $ _containerEnv_installations c
+    foreach (makeUser _containerEnv_OS c) $ _containerEnv_users c
+    foreach (uncurry installPkgs) $ _containerEnv_installations c
     foreach env $ _containerEnv_env c
     foreach run $ _containerEnv_runCmds c
     doIfJust entrypoint $ _containerEnv_entrypoint c
     doIfJust cmd $ _containerEnv_command c
-        where installPkgs' (installer, pkgs) = installPkgs installer pkgs
-              doIfJust f Nothing = return ()
+        where doIfJust f Nothing = return ()
               doIfJust f (Just x) = f x
 
 foreach :: (a -> Docker ()) 
@@ -104,7 +103,7 @@ makeUser :: OS
          -> String 
          -> Docker ()
 makeUser os uname = do
-    run [addUserProgram os, uname]
+    run (addUserProgram os ++ " " ++ uname)
     user uname
     workdir ("/home/" ++ uname)
     env "PATH" "/home/atidot/.local/bin:${PATH}"
