@@ -23,7 +23,7 @@ data OS = Ubuntu
         deriving (Show, Read, Eq, Ord, Enum, Bounded, Data, Typeable, Generic)
 
 data User = Root
-          | User { _user_name :: !Text }
+          | User { _user_name :: !String }
           deriving (Show, Read, Eq, Ord, Data, Typeable, Generic)
 
 instance Default User where
@@ -40,7 +40,7 @@ data ContainerEnv
         , _containerEnv_env :: !(Map String String)
         , _containerEnv_runCmds :: ![String]
         , _containerEnv_entrypoint :: !(Maybe Entrypoint)
-        , _containerEnv_command :: !(Maybe String)
+        , _containerEnv_command :: !(Maybe [String])
         } deriving (Show, Read, Eq, Ord, Data, Typeable, Generic)
 makeLenses ''ContainerEnv
 
@@ -71,7 +71,7 @@ toDocker c = do
     foreach (uncurry env) $ (assocs . _containerEnv_env) c
     foreach run $ _containerEnv_runCmds c
     doIfJust (flip entrypoint []) $ _containerEnv_entrypoint c
-    doIfJust cmd $ [_containerEnv_command c]
+    doIfJust cmd $ _containerEnv_command c
         where doIfJust f Nothing = return ()
               doIfJust f (Just x) = f x
 
@@ -80,7 +80,6 @@ foreach :: (a -> Docker ())
         -> Docker ()
 foreach f xs = foldl' (>>) (return ()) (map f xs)
 
--- TODO: Generalize this to take any line1
 installPkgs :: String
             -> [String] 
             -> Docker ()
