@@ -10,7 +10,8 @@ import           "platform-types"          Platform.Types
 import           "platform-dsl"            Platform.DSL
 import qualified "platform-dsl"            Platform.DSL as DSL (test)
 import           "platform-packaging"      Platform.Packaging
+import           "dockerfile"              Data.Docker
 
 
 main :: IO ()
-main = return ()
+main = (putStrLn . dockerfile . toDocker) def

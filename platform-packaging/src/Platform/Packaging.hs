@@ -14,20 +14,44 @@ import "lens"           Control.Lens hiding (from)
 import "data-default"   Data.Default (Default, def)
 import "containers"     Data.Map.Strict (Map, empty, assocs)
 import "text"           Data.Text (Text)
-import "dockerfile"     Data.Docker (Docker, from, run, cmd)
+import "dockerfile"     Data.Docker
 import "platform-types" Platform.Types
+
+data OS = Ubuntu
+        | RedHat
+        | CentOS
+        deriving (Show, Read, Eq, Ord, Enum, Bounded, Data, Typeable, Generic)
+
+data User = Root
+          | User { _user_name :: !Text }
+          deriving (Show, Read, Eq, Ord, Enum, Bounded, Data, Typeable, Generic)
+
+instance Default User where
+    def = Root
+
+type Entrypoint = String
 
 data ContainerEnv
     = ContainerEnv
-        { _containerEnv_image :: !String
-        , _containerEnv_installations :: ![(String, [String])]
+        { _containerEnv_OS :: !OS
+        , _containerEnv_users :: ![User]
+        , _containerEnv_image :: !String
+        , _containerEnv_installations :: ![(User, String, [String])]
         , _containerEnv_env :: !(Map String String)
-        , _containerEnv_command :: ![String]
+        , _containerEnv_runCmds :: ![String]
+        , _containerEnv_entrypoint :: !(Maybe Entrypoint)
+        , _containerEnv_command :: !(Maybe String)
         } deriving (Show, Read, Eq, Ord, Data, Typeable, Generic)
 makeLenses ''ContainerEnv
 
 instance Default ContainerEnv where
-    def = ContainerEnv "ubuntu:latest" [] empty []
+    def = ContainerEnv Ubuntu 
+                       [Root] 
+                       "ubuntu:latest" 
+                       [] 
+                       empty 
+                       Nothing
+                       Nothing
 
 -- The semigroup operator for ContainerEnv prefers values from the right operand.
 -- I.e. "new" environment variables override old ones, and the new command
@@ -39,11 +63,47 @@ instance Semigroup ContainerEnv where
         -- Note: `env2 <> env1` is not a typo, since Data.Map prefers the left value.
 
 toDocker :: ContainerEnv -> Docker ()
-toDocker (ContainerEnv image instList env command) = do
-    from image
-    iterateRun $ map (\(k, v) -> "export " ++ k ++ "=" ++ v) (assocs env)
-    -- Some kind of iterateRun to install the packages required
-    cmd command
+toDocker env = do
+    from $ _containerEnv_image env
+    foreach makeUser $ _containerEnv_users env
+    foreach installPkgs' $ _containerEnv_installations env
+    foreach export $ _containerEnv_env env
+    foreach run $ _containerEnv_runCmds env
+    doIfJust entrypoint $ _containerEnv_entrypoint env
+    doIfJust cmd $ _containerEnv_command env
+        where installPkgs' (installer, pkgs) = installPkgs installer pkgs
+              doIfJust f Nothing = return ()
+              doIfJust f (Just x) = f x
 
-iterateRun :: [String] -> Docker ()
-iterateRun xs = foldl' (>>) (return ()) (map run xs)
+foreach :: (a -> Docker ()) 
+        -> [a] 
+        -> Docker ()
+foreach f xs = foldl' (>>) (return ()) (map f xs)
+
+-- TODO: Generalize this to take any line1
+installPkgs :: String
+            -> [String] 
+            -> Docker ()
+installPkgs installer pkgs = run [installation]
+    where installation = foldl' (++) (installer ++ endl1) (map instLine pkgs)
+          instLine pkg = "    " ++ pkg ++ endl pkg
+          endl pkg     = replicate (maxLength - paddedLength pkg) ' ' ++ " \\\n"
+          paddedLine1  = "RUN " ++ installer ++ " \\"
+          endl1        = replicate (maxLength - length paddedLine1) ' ' ++ " \\\n"
+          maxLength    = max $ map length (paddedLine1 : map pad pkgs)
+          paddedLength = length . pad
+          pad pkg      = "    " ++ pkg ++ " \\"
+
+addUserProgram :: OS -> String
+addUserProgram Ubuntu = "adduser"
+addUserProgram CentOS = "adduser"
+addUserProgram RedHat = "useradd"
+
+makeUser :: OS 
+         -> String 
+         -> Docker ()
+makeUser os uname = do
+    run [addUserProgram os, uname]
+    user uname
+    workdir ("/home/" ++ uname)
+    env "PATH" "/home/atidot/.local/bin:${PATH}"
