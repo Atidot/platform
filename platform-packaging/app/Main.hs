@@ -17,5 +17,5 @@ import           "dockerfile"              Data.Docker
 main :: IO ()
 main = do
     pwd <- getCurrentDirectory
-    let dockerPath = pwd ++ "/DocerfileExample"
+    let dockerPath = pwd ++ "/DockerfileExample"
     dockerfileWrite dockerPath $ toDocker def

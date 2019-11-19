@@ -54,6 +54,11 @@ instance Default ContainerEnv where
                        Nothing
                        Nothing
 
+instance ToJSON ContainerEnv where
+    toEncoding = genericToEncoding defaultOptions
+
+instance FromJSON ContainerEnv where
+
 -- The semigroup operator for ContainerEnv prefers values from the right operand.
 -- I.e. "new" environment variables override old ones, and the new command
 -- overrides the old command. (The "newer" ContainerEnv is the right-hand one.)
