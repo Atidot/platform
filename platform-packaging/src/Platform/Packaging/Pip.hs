@@ -4,6 +4,9 @@
 {-# LANGUAGE DeriveDataTypeable #-}
 module Platform.Packaging.Pip where
 
+import "base" GHC.Generics (Generic)
+import "base" Data.Typeable (Typeable)
+import "base" Data.Data (Data)
 import "data-default" Data.Default (Default, def)
 import "text" Data.Text (Text)
 import qualified "text" Data.Text as T
@@ -341,7 +344,7 @@ data Format = Columns
             | JSON
             deriving (Show, Read, Eq, Ord, Enum, Bounded, Data, Typeable, Generic)
 
-data ListOpts = ListOptions
+data ListOpts = ListOpts
     { _listOpts_outdated :: !(Maybe Bool)
     , _listOpts_uptodate :: !(Maybe Bool)
     , _listOpts_editable :: !(Maybe Bool)
