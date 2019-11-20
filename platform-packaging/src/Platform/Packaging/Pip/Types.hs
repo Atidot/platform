@@ -1,5 +1,5 @@
 {-# LANGUAGE DeriveDataTypeable #-}
-{-# LANGUAGE DeriveGeneric #}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PackageImports #-}
 module Platform.Packaging.Pip.Types
@@ -10,6 +10,7 @@ module Platform.Packaging.Pip.Types
     UpgradeStrategy,
     FormatControl,
     ProgressBar,
+    GeneralOpts,
     InstallOpts,
     DownloadOpts,
     UninstallOpts,
@@ -31,6 +32,8 @@ import "base" Data.Data (Data)
 import "base" Data.Typeable (Typeable)
 import "base" GHC.Generics (Generic)
 import "text" Data.Text (Text)
+import qualified "text" Data.Text as T
+import "data-default" Data.Default (Default, def)
 
 type URL = Text
 
@@ -55,6 +58,90 @@ data ProgressBar
   | Pretty
   | Emoji
   deriving (Show, Read, Eq, Ord, Enum, Bounded, Data, Typeable, Generic)
+
+data Action
+  = SwitchAction
+  | IgnoreAction
+  | WipeAction
+  | BackupAction
+  | AbortAction
+  deriving (Show, Read, Eq, Ord, Enum, Bounded, Data, Typeable, Generic)
+
+data GeneralOpts
+  = GeneralOpts
+      { _generalOpts_help :: !(Maybe Bool)
+      , _generalOpts_isolated :: !(Maybe Bool)
+      , _generalOpts_verbose :: !(Maybe Bool)
+      , _generalOpts_version :: !(Maybe Bool)
+      , _generalOpts_quiet :: !(Maybe Bool)
+      , _generalOpts_log :: !(Maybe FilePath)
+      , _generalOpts_proxy :: !(Maybe Text)
+      , _generalOpts_retries :: !(Maybe Int)
+      , _generalOpts_timeout :: !(Maybe Int)
+      , _generalOpts_existsAction :: !(Maybe Action)
+      , _generalOpts_trustedHost :: !(Maybe URL)
+      , _generalOpts_cert :: !(Maybe FilePath)
+      , _generalOpts_clientCert :: !(Maybe FilePath)
+      , _generalOpts_cacheDir :: !(Maybe FilePath)
+      , _generalOpts_noCacheDir :: !(Maybe Bool)
+      , _generalOpts_disablePipVersionCheck :: !(Maybe Bool)
+      , _generalOpts_noColor :: !(Maybe Bool)
+      } 
+  deriving (Show, Read, Eq, Ord, Data, Typeable, Generic)
+
+instance Default GeneralOpts where
+    def = Nothing
+          Nothing
+          Nothing
+          Nothing
+          Nothing
+          Nothing
+          Nothing
+          Nothing
+          Nothing
+          Nothing
+          Nothing
+          Nothing
+          Nothing
+          Nothing
+          Nothing
+
+instance Opts GeneralOpts where
+    fmtOpts (GeneralOpts help
+                         isolated
+                         verbose
+                         version
+                         quiet
+                         log
+                         proxy
+                         retries
+                         timeout
+                         existsAction
+                         trustedHost
+                         cert
+                         clientCert
+                         cacheDir
+                         noCacheDir
+                         disablePipVersionCheck
+                         noColor)
+                           = noEmpty [ boolPrint "help" help
+                                     , boolPrint "isolated" isolated
+                                     , boolPrint "verbose" verbose
+                                     , boolPrint "version" version
+                                     , boolPrint "quiet" quiet
+                                     , txtPrint "log" log
+                                     , txtPrint "proxy" proxy
+                                     , intPrint "retries" retries
+                                     , intPrint "timeout" timeout
+                                     , actionPrint "exists-action" existsAction
+                                     , txtPrint "trusted-host" trustedHost
+                                     , txtPrint "cert" cert
+                                     , txtPrint "client-cert" clientCert
+                                     , txtPrint "cache-dir" cacheDir
+                                     , boolPrint "no-cache-dir" noCacheDir
+                                     , boolPrint "disable-pip-version-check" disablePipVersionCheck
+                                     , boolPrint "no-color" noColor
+                                     ]
 
 data InstallOpts
   = InstallOpts
@@ -102,7 +189,8 @@ data InstallOpts
 
 instance Default InstallOpts where
   def =
-    Nothing
+    InstallOpts
+      Nothing
       Nothing
       Nothing
       Nothing
@@ -185,45 +273,45 @@ instance Opts InstallOpts where
         findLinks
       ) =
       noEmpty
-        [ printOpt "requirement" requirement,
-          printOpt "constraint" constraint,
-          printOpt "no-deps" no - deps,
-          printOpt "pre" pre,
+        [ txtPrint "requirement" requirement,
+          txtPrint "constraint" constraint,
+          boolPrint "no-deps" no - deps,
+          boolPrint "pre" pre,
           eitherPrint "editable" editable,
-          printOpt "target" target,
-          printOpt "platform" platform,
-          printOpt "python-version" pythonVersion,
-          printOpt "implementation" implementation,
-          printOpt "abi" abi,
-          printOpt "user" user,
-          printOpt "root" root,
-          printOpt "prefix" prefix,
-          printOpt "build" build,
-          printOpt "src" src,
-          printOpt "upgrade" upgrade,
+          txtPrint "target" target,
+          txtPrint "platform" platform,
+          txtPrint "python-version" pythonVersion,
+          txtPrint "implementation" implementation,
+          txtPrint "abi" abi,
+          boolPrint "user" user,
+          txtPrint "root" root,
+          txtPrint "prefix" prefix,
+          txtPrint "build" build,
+          txtPrint "src" src,
+          boolPrint "upgrade" upgrade,
           upgrPrint upgradeStrategy,
-          printOpt "force-reinstall" forceReinstall,
-          printOpt "ignore-installed" ignoreInstalled,
-          printOpt "ignore-requires-python" ignoreRequiresPython,
-          printOpt "no-build-isolation" noBuildIsolation,
-          printOpt "use-pep517" usePEP517,
-          printOpt "no-use-pep517" noUsePEP517,
-          printOpt "install-option" installOption,
-          printOpt "global-option" globalOption,
-          printOpt "compile" compile,
-          printOpt "no-compile" noCompile,
-          printOpt "no-warn-script-location" noWarnScriptLocation,
-          printOpt "no-warn-conflicts" noWarnConflicts,
+          boolPrint "force-reinstall" forceReinstall,
+          boolPrint "ignore-installed" ignoreInstalled,
+          boolPrint "ignore-requires-python" ignoreRequiresPython,
+          boolPrint "no-build-isolation" noBuildIsolation,
+          boolPrint "use-pep517" usePEP517,
+          boolPrint "no-use-pep517" noUsePEP517,
+          txtPrint "install-option" installOption,
+          txtPrint "global-option" globalOption,
+          boolPrint "compile" compile,
+          boolPrint "no-compile" noCompile,
+          boolPrint "no-warn-script-location" noWarnScriptLocation,
+          boolPrint "no-warn-conflicts" noWarnConflicts,
           controlPrint "no-binary" noBinary,
           controlPrint "only-binary" onlyBinary,
-          printOpt "prefer-binary" preferBinary,
-          printOpt "no-clean" noClean,
-          printOpt "require-hashes" requireHashes,
+          boolPrint "prefer-binary" preferBinary,
+          boolPrint "no-clean" noClean,
+          boolPrint "require-hashes" requireHashes,
           "--progress-bar" ++ progressPrint progressBar,
-          printOpt "index-url" index,
-          printOpt "extra-index-url" extraIndex,
-          printOpt "no-index" noIndex,
-          printOpt "find-links" findLinks
+          txtPrint "index-url" index,
+          txtPrint "extra-index-url" extraIndex,
+          boolPrint "no-index" noIndex,
+          txtPrint "find-links" findLinks
         ]
       where
         upgrPrint Eager = "--upgrade-strategy eager"
@@ -303,30 +391,30 @@ instance Opts DownloadOpts where
         findLinks
       ) =
       noEmpty
-        [ printOpts "constraint" constraint,
-          printOpts "requirement" requirement,
-          printOpts "build" build,
-          printOpts "no-deps" noDeps,
+        [ txtPrint "constraint" constraint,
+          txtPrint "requirement" requirement,
+          txtPrint "build" build,
+          boolPrint "no-deps" noDeps,
           controlPrint "no-binary" noBinary,
           controlPrint "only-binary" onlyBinary,
-          printOps "prefer-binary" preferBinary,
-          printOpts "src" src,
-          printOpts "pre" pre,
-          printOpts "no-clean" noClean,
-          printOpts "require-hashes" requireHashes,
+          boolPrint "prefer-binary" preferBinary,
+          txtPrint "src" src,
+          boolPrint "pre" pre,
+          boolPrint "no-clean" noClean,
+          boolPrint "require-hashes" requireHashes,
           progressPrint progressBar,
-          printOpts "no-build-isolation" noBuildIsolation,
-          printOpts "use-pep517" usePEP517,
-          printOpts "no-use-pep517" noUsePEP517,
-          printOpts "dest" dest,
-          printOpts "platform" platform,
-          printOpts "python-version" pythonVersion,
-          printOpts "implementation" implementation,
-          printOpts "abi" abi,
-          printOpts "index" index,
-          printOpts "extra-index" extraIndex,
-          printOpts "no-index" noIndex,
-          printOpts "find-links" findLinks
+          boolPrint "no-build-isolation" noBuildIsolation,
+          boolPrint "use-pep517" usePEP517,
+          boolPrint "no-use-pep517" noUsePEP517,
+          txtPrint "dest" dest,
+          txtPrint "platform" platform,
+          txtPrint "python-version" pythonVersion,
+          txtPrint "implementation" implementation,
+          txtPrint "abi" abi,
+          txtPrint "index" index,
+          txtPrint "extra-index" extraIndex,
+          boolPrint "no-index" noIndex,
+          txtPrint "find-links" findLinks
         ]
 
 data UninstallOpts
@@ -341,7 +429,7 @@ instance Default UninstallOpts where
 
 instance Opts DownloadOpts where
   fmtOpts (UninstallOpts requirement yes) =
-    noEmpty [printOpts "requirement" requirement, printOpts "yes" yes]
+    noEmpty [txtPrint "requirement" requirement, boolPrint "yes" yes]
 
 data FreezeOpts
   = FreezeOpts
@@ -377,13 +465,13 @@ instance Opts FreezeOpts where
         excludeEditable
       ) =
       noEmpty
-        [ printOpt "requirements" requirements,
-          printOpt "find-links" findLinks,
-          printOpt "local" local,
-          printOpt "user" user,
-          printOpt "path" path,
-          printOpt "all" all,
-          printOpt "exclude-editable" excludeEditable
+        [ txtPrint "requirements" requirements,
+          txtPrint "find-links" findLinks,
+          boolPrint "local" local,
+          boolPrint "user" user,
+          txtPrint "path" path,
+          boolPrint "all" all,
+          boolPrint "exclude-editable" excludeEditable
         ]
 
 data Format
@@ -451,21 +539,21 @@ instance Opts ListOpts where
         findLinks
       ) =
       noEmpty
-        [ printOpt "outdated" outdated,
-          printOpt "uptodate" uptodate,
-          printOpt "editable" editable,
-          printOpt "local" local,
-          printOpt "user" user,
-          printOpt "path" path,
-          printOpt "pre" pre,
-          printOpt "format" format,
-          printOpt "not-required" notRequired,
-          printOpt "exclude-editable" excludeEditable,
-          printOpt "include-editable" includeEditable,
-          printOpt "index-url" index,
-          printOpt "extra-index-url" extraIndex,
-          printOpt "no-index" noIndex,
-          printOpt "find-links" findLinks
+        [ boolPrint "outdated" outdated,
+          boolPrint "uptodate" uptodate,
+          boolPrint "editable" editable,
+          boolPrint "local" local,
+          boolPrint "user" user,
+          txtPrint "path" path,
+          boolPrint "pre" pre,
+          formatPrint "format" format,
+          boolPrint "not-required" notRequired,
+          boolPrint "exclude-editable" excludeEditable,
+          boolPrint "include-editable" includeEditable,
+          txtPrint "index-url" index,
+          txtPrint "extra-index-url" extraIndex,
+          boolPrint "no-index" noIndex,
+          txtPrint "find-links" findLinks
         ]
 
 newtype ShowOpts
@@ -477,7 +565,7 @@ instance Default ShowOpts where
   def = ShowOpts Nothing
 
 instance Opts ShowOpts where
-  fmtOpts = noEmpty [printOpt "files" files]
+  fmtOpts = noEmpty [txtPrint "files" files]
 
 newtype SearchOpts
   = SearchOpts
@@ -488,7 +576,7 @@ instance Default SearchOpts where
   def = SearchOpts Nothing
 
 instance Opts SearchOpts where
-  fmtOpts (SearchOpts index) = noEmpty [printOpt "index" index]
+  fmtOpts (SearchOpts index) = noEmpty [txtPrint "index" index]
 
 newtype CheckOpts = CheckOpts ()
   deriving (Read, Eq, Ord, Enum, Bounded, Data, Typeable, Generic)
@@ -525,10 +613,10 @@ instance Opts ConfigOpts where
         site
       ) =
       noEmpty
-        [ printOpt "editor" editor,
-          printOpt "global" global,
-          printOpt "user" user,
-          printOpt "site" site
+        [ txtPrint "editor" editor,
+          boolPrint "global" global,
+          boolPrint "user" user,
+          boolPrint "site" site
         ]
 
 data WheelOpts
@@ -617,30 +705,30 @@ instance Opts WheelOpts where
         findLinks
       ) =
       noEmpty
-        [ printOpt "wheel-dir" wheelDir,
+        [ txtPrint "wheel-dir" wheelDir,
           controlPrint "no-binary" noBinary,
           controlPrint "only-binary" onlyBinary,
-          printOpt "prefer-binary" preferBinary,
-          printOpt "build-option" buildOption,
-          printOpt "no-build-isolation" noBuildIsolation,
-          printOpt "use-pep517" usePEP517,
-          printOpt "no-use-pep517" noUsePEP517,
-          printOpt "constraint" constraint,
+          boolPrint "prefer-binary" preferBinary,
+          txtPrint "build-option" buildOption,
+          boolPrint "no-build-isolation" noBuildIsolation,
+          boolPrint "use-pep517" usePEP517,
+          boolPrint "no-use-pep517" noUsePEP517,
+          txtPrint "constraint" constraint,
           eitherPrint "editable" editable,
-          printOpt "requirement" requirement,
-          printOpt "src" src,
-          printOpt "ignore-requires-python" ignoreRequiresPython,
-          printOpt "no-deps" noDeps,
-          printOpt "build" build,
+          txtPrint "requirement" requirement,
+          txtPrint "src" src,
+          boolPrint "ignore-requires-python" ignoreRequiresPython,
+          boolPrint "no-deps" noDeps,
+          txtPrint "build" build,
           progressPrint progressBar,
-          printOpt "global-option" globalOption,
-          printOpt "pre" pre,
-          printOpt "no-clean" noClean,
-          printOpt "require-hashes" requireHashes,
-          printOpt "index" index,
-          printOpt "extra-index" extraIndex,
-          printOpt "no-index" noIndex,
-          printOpt "find-links" findLinks
+          txtPrint "global-option" globalOption,
+          boolPrint "pre" pre,
+          boolPrint "no-clean" noClean,
+          boolPrint "require-hashes" requireHashes,
+          txtPrint "index" index,
+          txtPrint "extra-index" extraIndex,
+          boolPrint "no-index" noIndex,
+          txtPrint "find-links" findLinks
         ]
 
 data HashOpts
@@ -653,7 +741,7 @@ instance Default HashOpts where
   def = SHA256
 
 instance Opts HashOpts where
-  fmtOpts opt = [printOpt "algorithm" (algName opt)]
+  fmtOpts opt = [txtPrint "algorithm" (algName opt)]
     where
       algName SHA256 = "sha256"
       algName SHA384 = "sha384"
@@ -674,10 +762,10 @@ instance Default DebugOpts where
 instance Opts DebugOpts where
   fmtOpts (DebugOpts plat vers impl abi) =
     noEmpty
-      [ printOpt "platform" plat,
-        printOpt "python-version" vers,
-        printOpt "implementation" impl,
-        printOpt "abi" abi
+      [ txtPrint "platform" plat,
+        txtPrint "python-version" vers,
+        txtPrint "implementation" impl,
+        txtPrint "abi" abi
       ]
 
 install = undefined
@@ -696,8 +784,8 @@ class Input a where
   fmtInput :: a -> [Text]
 
 data PipInput
-  = URLs URLList
-  | Files FileList
+  = URLInput URLList
+  | FileInput FileList
   | ReqSpecInput [(ReqSpec, PkgIndexOpts)]
   | ReqFileInput [(FilePath, PkgIndexOpts)]
   deriving (Read, Show, Eq, Ord, Data, Typeable, Generic)
@@ -711,13 +799,13 @@ instance Input PipInput where
       fmtReqs = noEmpty . concat $ map (\(r, p) -> [r, fmtOpts p])
 
 data UninstallInput
-  = Pkgs PkgList
-  | Files FileList
+  = UnInstPkgs PkgList
+  | UnInstFiles FileList
   deriving (Read, Show, Eq, Ord, Data, Typeable, Generic)
 
 instance Input UninstallInput where
-  fmtInput (Pkgs pkgs) = pkgs
-  fmtInput (Files files) = files
+  fmtInput (UnInstPkgs pkgs) = pkgs
+  fmtInput (UnInstFiles files) = files
 
 data ConfigInput
   = List
@@ -733,18 +821,25 @@ instance Input ConfigInput where
   fmtInput Set name value = ["set", name, value]
   fmtInput Unset name = ["unset", name]
 
-printOpt :: Text 
+txtPrint :: Text 
          -> Maybe Text 
          -> Text
-printOpt _ Nothing = ""
-printOpt optName optVar = "--" ++ optName ++ " " ++ optVar
+txtPrint _ Nothing = ""
+txtPrint optName optVar = "--" ++ optName ++ " " ++ optVar
 
-printOpt :: Text
-         -> Maybe Bool
-         -> Text
-printOpt _ Nothing = ""
-printOpt _ (Just False) = ""
-printOpt optName (Just True) = "--" ++ optName
+boolPrint :: Text
+          -> Maybe Bool
+          -> Text
+boolPrint _ Nothing = ""
+boolPrint _ (Just False) = ""
+boolPrint optName (Just True) = "--" ++ optName
+
+actionPrint :: Action -> Text
+actionPrint Switch = "s"
+actionPrint Ignore = "i"
+actionPrint Wipe = "w"
+actionPrint Backup = "b"
+actionPrint Abort = "a"
 
 controlPrint :: Text 
              -> Maybe FormatControl

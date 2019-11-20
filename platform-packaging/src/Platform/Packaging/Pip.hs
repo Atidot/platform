@@ -21,68 +21,77 @@ import "shellmet" Shellmet (($|))
 pipCmd ::
   (Opts a) =>
   Text ->
+  GeneralOpts ->
   a ->
   PipInput ->
   IO Text
-pipCmd command input opts =
-  pip $ command : fmtOpts opts ++ fmtInput input
+pipCmd command input gOpts opts =
+  pip $ command : fmtOpts gOpts ++ fmtOpts opts ++ fmtInput input
 
 install ::
+  GeneralOpts
   InstallOpts ->
   PipInput ->
   IO Text
 install = pipCmd "install" 
 
 download ::
+  GeneralOpts
   DownloadOpts ->
   PipInput ->
   IO Text
 download = pipCmd "download"
 
 uninstall ::
+  GeneralOpts
   UninstallOpts ->
   UninstallInput ->
   IO Text
 uninstall = pipCmd "uninstall" 
 
-freeze :: FreezeOpts -> IO Text
-freeze opts = pip $ "freeze" : fmtOpts opts
+freeze :: GeneralOpts -> FreezeOpts -> IO Text
+freeze gOpts opts = pip $ "freeze" : fmtOpts gOpts ++ fmtOpts opts
 
 list :: ListOpts -> IO Text
-list opts = pip $ "list" : fmtOpts opts
+list gOpts opts = pip $ "list" : fmtOpts gOpts ++ fmtOpts opts
 
 show ::
+  GeneralOpts ->
   ShowOpts ->
   PkgList ->
   IO Text
-show opts pkgs = pip $ "show" : fmtOpts opts ++ pkgs
+show gOpts opts pkgs = pip $ "show" : fmtOpts gOpts ++ fmtOpts opts ++ pkgs
 
 search ::
+  GeneralOpts
   SearchOpts ->
   Text ->
   IO Text
-search opts pkg = pip $ "search" : fmtOpts opts ++ [pkg]
+search gOpts opts pkg = pip $ "search" : fmtOpts gOpts ++ fmtOpts opts ++ [pkg]
 
-check :: CheckOpts -> IO Text
-check opts = pip $ "check" : fmtOpts opts
+check :: GeneralOpts -> CheckOpts -> IO Text
+check gOpts opts = pip $ "check" : fmtOpts gOpts ++ fmtOpts opts
 
 config ::
+  GeneralOpts ->
   ConfigOpts ->
   ConfigInput ->
   IO Text
 config = pipCmd "config"
 
 wheel ::
+  GeneralOpts ->
   WheelOpts ->
   PipInput ->
   IO Text
 wheel = pipCmd "wheel"
 
 hash ::
+  GeneralOpts ->
   HashOpts ->
   FileList ->
   IO Text
-hash opts fp = pip $ "hash" : fmtOpts opts : fp
+hash gOpts opts fps = pip $ "hash" : fmtOpts gOpts ++ fmtOpts opts ++ fps
 
 debug :: DebugOpts -> IO Text
-debug opts = pip $ "debug" : fmtOpts opts
+debug gOpts opts = pip $ "debug" : fmtOpts gOpts ++ fmtOpts opts
