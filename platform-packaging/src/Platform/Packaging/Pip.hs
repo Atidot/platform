@@ -4,6 +4,7 @@
 {-# LANGUAGE DeriveDataTypeable #-}
 module Platform.Packaging.Pip where
 
+import "data-default" Data.Default (Default, def)
 import "text" Data.Text (Text)
 import qualified "text" Data.Text as T
 import "shellmet"  Shellmet (($|))
@@ -589,7 +590,7 @@ data DebugOpts = DebugOpts
 instance Default DebugOpts where
     def = Nothing Nothing Nothing Nothing
 
-instance Opt DebugOpts where
+instance Opts DebugOpts where
     fmtOpts (DebugOpts plat vers impl abi) = 
         noEmpty [ printOpt "platform" plat 
                 , printOpt "python-version" vers 
