@@ -23,9 +23,19 @@ data OS = Ubuntu
         | CentOS
         deriving (Show, Read, Eq, Ord, Enum, Bounded, Data, Typeable, Generic)
 
+instance ToJSON OS where
+    toEncoding = genericToEncoding defaultOptions
+
+instance FromJSON OS where
+
 data User = Root
           | User { _user_name :: !String }
           deriving (Show, Read, Eq, Ord, Data, Typeable, Generic)
+
+instance ToJSON User where
+    toEncoding = genericToEncoding defaultOptions
+
+instance FromJSON User where
 
 instance Default User where
     def = Root

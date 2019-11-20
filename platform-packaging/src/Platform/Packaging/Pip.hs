@@ -189,7 +189,7 @@ instance Opts InstallOpts where
                                      , printOpt "no-index" noIndex
                                      , printOpt "find-links" findLinks
                                      ]
-              upgrPrint Eager = "--upgrade-strategy eager"
+        where upgrPrint Eager = "--upgrade-strategy eager"
               upgrPrint OnlyIfNeeded = "--upgrade-strategy only-if-needed"
 
 data DownloadOpts = DownloadOpts
