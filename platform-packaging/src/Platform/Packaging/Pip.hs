@@ -755,7 +755,7 @@ printOpt optName (Just True) = "--" ++ optName
 controlPrint :: Text 
              -> Maybe FormatControl
              -> Text
-controlPrint _ Nothing
+controlPrint _ Nothing = ""
 controlPrint name (Just All) = "--" ++ name ++ " :all:"
 controlPrint name (Just None) = "--" ++ name ++ " :none:"
 controlPrint name (Just (Pkgs ps)) = "--" ++ name ++ " " ++ 
