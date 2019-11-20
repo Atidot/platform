@@ -4,7 +4,7 @@
 {-# LANGUAGE DeriveDataTypeable #-}
 module Platform.Packaging.Pip where
 
-import "data-text" Data.Text (Text)
+import "text" Data.Text (Text)
 import qualified "data-text" Data.Text as T
 import "shellmet"  Shellmet (($|))
 

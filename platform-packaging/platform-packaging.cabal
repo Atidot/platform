@@ -30,6 +30,7 @@ library
                      , free
                      , containers
                      , shelly
+                     , shellmet
                      , dockerfile
                      , mtl
                      , exceptions
