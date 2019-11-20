@@ -73,11 +73,16 @@ instance FromJSON ContainerEnv where
 -- The semigroup operator for ContainerEnv prefers values from the right operand.
 -- I.e. "new" environment variables override old ones, and the new command
 -- overrides the old command. (The "newer" ContainerEnv is the right-hand one.)
---instance Semigroup ContainerEnv where
---    (<>) (ContainerEnv image1 insts1 env1 command1) 
---         (ContainerEnv image2 insts2 env2 command2)
---        = ContainerEnv image2 (insts1 <> insts2) (env2 <> env1) command2
-        -- Note: `env2 <> env1` is not a typo, since Data.Map prefers the left value.
+instance Semigroup ContainerEnv where
+    (<>) (ContainerEnv os1 users1 image1 insts1 env1 runs1 entry1 command1) 
+         (ContainerEnv os2 users2 image2 insts2 env2 runs2 entry2 command2)
+        = ContainerEnv os2
+                       image2 
+                       (insts1 <> insts2) 
+                       (env2 <> env1) -- Map prefers the left value
+                       (runs1 <> runs2)
+                       entry2
+                       command2
 
 toDocker :: ContainerEnv -> Docker ()
 toDocker (ContainerEnv os users img pkgs environment runCmds entrypoint' command) = do
