@@ -8,6 +8,8 @@ import "data-text" Data.Text (Text)
 import qualified "data-text" Data.Text as T
 import "shellmet"  Shellmet (($|))
 
+type URL = Text
+
 class Opts a where
     fmtOpts :: a -> [Text]
 
@@ -772,4 +774,4 @@ noEmpty :: [Text] -> [Text]
 noEmpty = filter (/= "")
 
 pip :: [Text] -> IO Text
-pip = "pip" $|
+pip = ($|) "pip"
