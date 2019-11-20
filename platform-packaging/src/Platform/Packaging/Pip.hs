@@ -5,7 +5,7 @@
 module Platform.Packaging.Pip where
 
 import "text" Data.Text (Text)
-import qualified "data-text" Data.Text as T
+import qualified "text" Data.Text as T
 import "shellmet"  Shellmet (($|))
 
 type URL = Text
