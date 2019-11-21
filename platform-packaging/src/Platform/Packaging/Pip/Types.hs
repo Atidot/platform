@@ -36,14 +36,14 @@ module Platform.Packaging.Pip.Types
   )
 where
 
-import "base" Data.Char (toLower)
-import "base" Data.Data (Data)
-import "base" Data.Typeable (Typeable)
-import "base" GHC.Generics (Generic)
-import "aeson" Data.Aeson (ToJSON, FromJSON, toEncoding, genericTodEncoding, defaultOptions)
-import "text" Data.Text (Text, intercalate)
-import qualified "text" Data.Text as T
-import "data-default" Data.Default (Default, def)
+import           "base"         Data.Char (toLower)
+import           "base"         Data.Data (Data)
+import           "base"         Data.Typeable (Typeable)
+import           "base"         GHC.Generics (Generic)
+import           "aeson"        Data.Aeson (ToJSON, FromJSON, toEncoding, genericTodEncoding, defaultOptions)
+import           "text"         Data.Text (Text, intercalate)
+import qualified "text"         Data.Text as T
+import           "data-default" Data.Default (Default, def)
 
 type URL = Text
 type FilePathT = Text
