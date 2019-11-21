@@ -77,6 +77,7 @@ instance Semigroup ContainerEnv where
     (<>) (ContainerEnv os1 users1 image1 insts1 env1 runs1 entry1 command1) 
          (ContainerEnv os2 users2 image2 insts2 env2 runs2 entry2 command2)
         = ContainerEnv os2
+                       (users1 <> users2)
                        image2 
                        (insts1 <> insts2) 
                        (env2 <> env1) -- Map prefers the left value
