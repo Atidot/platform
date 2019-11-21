@@ -999,9 +999,10 @@ instance Input UninstallInput where
 data ConfigInput
   = List
   | Edit
-  | Get Text
-  | Set Text Text
-  | Unset Text
+  | Get !Text
+  | Set !Text !Text
+  | Unset !Text
+  deriving (Read, Show, Eq, Ord, Data, Typeable, Generic)
 
 instance ToJSON ConfigInput where
     toEncoding = genericToEncoding defaultOptions
