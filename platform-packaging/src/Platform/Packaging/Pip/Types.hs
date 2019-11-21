@@ -1032,7 +1032,9 @@ boolPrint _ Nothing = ""
 boolPrint _ (Just False) = ""
 boolPrint optName (Just True) = "--" <> optName
 
-actionPrint :: Text -> Maybe Action -> Text
+actionPrint :: Text 
+            -> Maybe Action 
+            -> Text
 actionPrint _ Nothing = ""
 actionPrint name (Just action) = "--" <> name <> " " <> ap' action
   where ap' SwitchAction = "s"
@@ -1052,19 +1054,25 @@ controlPrint name (Just (Pkgs ps)) = "--" <> name <> " " <>
 
 progressPrint :: Maybe ProgressBar -> Text
 progressPrint Nothing = ""
-progressPrint (Just bar) = "--progress-bar " <> (T.pack . (map toLower) . show) bar
+progressPrint (Just bar) = "--progress-bar " <> (T.pack . map toLower . show) bar
 
-formatPrint :: Text -> Maybe OutputFormat -> Text
+formatPrint :: Text 
+            -> Maybe OutputFormat 
+            -> Text
 formatPrint = undefined
 
-eitherPrint :: Text -> Maybe (Either FilePathT URL) -> Text
+eitherPrint :: Text 
+            -> Maybe (Either FilePathT URL) 
+            -> Text
 eitherPrint _ Nothing = ""
 eitherPrint name (Just (Left t)) = "--" <> name <> " " <> t
 eitherPrint name (Just (Right t)) = "--" <> name <> " " <> t
 
-intPrint :: Text -> Maybe Int -> Text
+intPrint :: Text 
+         -> Maybe Int 
+         -> Text
 intPrint _ Nothing = ""
-intPrint name (Just n) = "--" <> name <> " " <> (T.pack $ show n)
+intPrint name (Just n) = "--" <> name <> " " <> T.pack $ show n
 
 noEmpty :: [Text] -> [Text]
 noEmpty = filter (/= "")
