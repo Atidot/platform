@@ -2,7 +2,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PackageImports #-}
 {-# LANGUAGE DeriveDataTypeable #-}
-module Platform.Packaging.Extract where
+module Platform.Packaging.PythonImports where
 
 import "base" GHC.Generics (Generic)
 import "base" Data.Typeable (Typeable)
