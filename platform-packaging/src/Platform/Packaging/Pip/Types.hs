@@ -12,6 +12,9 @@ module Platform.Packaging.Pip.Types
     ProgressBar,
     HashAlgs,
     OutputFormat,
+    ReqSpec,
+    PkgVersion,
+    VersOrdering,
     GeneralOpts,
     InstallOpts,
     DownloadOpts,
@@ -37,6 +40,7 @@ import "base" Data.Char (toLower)
 import "base" Data.Data (Data)
 import "base" Data.Typeable (Typeable)
 import "base" GHC.Generics (Generic)
+import "aeson" Data.Aeson (ToJSON, FromJSON, toEncoding, genericTodEncoding, defaultOptions)
 import "text" Data.Text (Text, intercalate)
 import qualified "text" Data.Text as T
 import "data-default" Data.Default (Default, def)
@@ -52,11 +56,21 @@ data UpgradeStrategy
   | OnlyIfNeeded
   deriving (Show, Read, Eq, Ord, Enum, Bounded, Data, Typeable, Generic)
 
+instance ToJSON UpgradeStrategy where
+    toEncoding = genericToEncoding defaultOptions
+
+instance FromJSON UpgradeStrategy where
+
 data FormatControl
   = None
   | All
   | Pkgs [Text]
   deriving (Show, Read, Eq, Ord, Data, Typeable, Generic)
+
+instance ToJSON FormatControl where
+    toEncoding = genericToEncoding defaultOptions
+
+instance FromJSON FormatControl where
 
 data ProgressBar
   = Off
@@ -66,6 +80,11 @@ data ProgressBar
   | Emoji
   deriving (Show, Read, Eq, Ord, Enum, Bounded, Data, Typeable, Generic)
 
+instance ToJSON ProgressBar where
+    toEncoding = genericToEncoding defaultOptions
+
+instance FromJSON ProgressBar where
+
 data Action
   = SwitchAction
   | IgnoreAction
@@ -73,6 +92,11 @@ data Action
   | BackupAction
   | AbortAction
   deriving (Show, Read, Eq, Ord, Enum, Bounded, Data, Typeable, Generic)
+
+instance ToJSON Action where
+    toEncoding = genericToEncoding defaultOptions
+
+instance FromJSON Action where
 
 data GeneralOpts
   = GeneralOpts
@@ -95,6 +119,11 @@ data GeneralOpts
       , _generalOpts_noColor :: !(Maybe Bool)
       } 
   deriving (Show, Read, Eq, Ord, Data, Typeable, Generic)
+
+instance ToJSON GeneralOpts where
+    toEncoding = genericToEncoding defaultOptions
+
+instance FromJSON GeneralOpts where
 
 instance Default GeneralOpts where
     def = GeneralOpts Nothing
@@ -195,6 +224,11 @@ data InstallOpts
         _installOpts_findLinks :: !(Maybe URL)
       }
   deriving (Show, Read, Eq, Ord, Data, Typeable, Generic)
+
+instance ToJSON InstallOpts where
+    toEncoding = genericToEncoding defaultOptions
+
+instance FromJSON InstallOpts where
 
 instance Default InstallOpts where
   def =
@@ -357,6 +391,11 @@ data DownloadOpts
       }
   deriving (Show, Read, Eq, Ord, Data, Typeable, Generic)
 
+instance ToJSON DownloadOpts where
+    toEncoding = genericToEncoding defaultOptions
+
+instance FromJSON DownloadOpts where
+
 instance Default DownloadOpts where
   def =
     DownloadOpts
@@ -447,6 +486,11 @@ data UninstallOpts
       }
   deriving (Show, Read, Eq, Ord, Data, Typeable, Generic)
 
+instance ToJSON UninstallOpts where
+    toEncoding = genericToEncoding defaultOptions
+
+instance FromJSON UninstallOpts where
+
 instance Default UninstallOpts where
   def = UninstallOpts Nothing Nothing
 
@@ -465,6 +509,11 @@ data FreezeOpts
         _freezeOpts_excludeEditable :: !(Maybe Bool)
       }
   deriving (Show, Read, Eq, Ord, Data, Typeable, Generic)
+
+instance ToJSON FreezeOpts where
+    toEncoding = genericToEncoding defaultOptions
+
+instance FromJSON FreezeOpts where
 
 instance Default FreezeOpts where
   def =
@@ -504,6 +553,11 @@ data OutputFormat
   | JSON
   deriving (Show, Read, Eq, Ord, Enum, Bounded, Data, Typeable, Generic)
 
+instance ToJSON OutputFormat where
+    toEncoding = genericToEncoding defaultOptions
+
+instance FromJSON OutputFormat where
+
 data ListOpts
   = ListOpts
       { _listOpts_outdated :: !(Maybe Bool),
@@ -523,6 +577,11 @@ data ListOpts
         _listOpts_findLinks :: !(Maybe URL)
       }
   deriving (Read, Eq, Ord, Data, Typeable, Generic)
+
+instance ToJSON ListOpts where
+    toEncoding = genericToEncoding defaultOptions
+
+instance FromJSON ListOpts where
 
 instance Default ListOpts where
   def =
@@ -585,6 +644,11 @@ data ShowOpts
       {_showOpts_files :: !(Maybe Bool)}
   deriving (Show, Read, Eq, Ord, Data, Typeable, Generic)
 
+instance ToJSON ShowOpts where
+    toEncoding = genericToEncoding defaultOptions
+
+instance FromJSON ShowOpts where
+
 instance Default ShowOpts where
   def = ShowOpts Nothing
 
@@ -596,6 +660,11 @@ data SearchOpts
       {_searchOpts_index :: !(Maybe URL)}
   deriving (Read, Eq, Ord, Data, Typeable, Generic)
 
+instance ToJSON SearchOpts where
+    toEncoding = genericToEncoding defaultOptions
+
+instance FromJSON SearchOpts where
+
 instance Default SearchOpts where
   def = SearchOpts Nothing
 
@@ -604,6 +673,11 @@ instance Opts SearchOpts where
 
 newtype CheckOpts = CheckOpts ()
   deriving (Read, Eq, Ord, Bounded, Data, Typeable, Generic)
+
+instance ToJSON CheckOpts where
+    toEncoding = genericToEncoding defaultOptions
+
+instance FromJSON CheckOpts where
 
 instance Default CheckOpts where
   def = CheckOpts ()
@@ -619,6 +693,11 @@ data ConfigOpts
         _configOpts_site :: !(Maybe Bool)
       }
   deriving (Show, Read, Eq, Ord, Data, Typeable, Generic)
+
+instance ToJSON ConfigOpts where
+    toEncoding = genericToEncoding defaultOptions
+
+instance FromJSON ConfigOpts where
 
 instance Default ConfigOpts where
   def =
@@ -671,6 +750,11 @@ data WheelOpts
         _wheelOpts_findLinks :: !(Maybe URL)
       }
   deriving (Show, Read, Eq, Ord, Data, Typeable, Generic)
+
+instance ToJSON WheelOpts where
+    toEncoding = genericToEncoding defaultOptions
+
+instance FromJSON WheelOpts where
 
 instance Default WheelOpts where
   def =
@@ -761,9 +845,19 @@ data HashAlgs
   | SHA512
   deriving (Show, Read, Eq, Ord, Enum, Bounded, Data, Typeable, Generic)
 
+instance ToJSON HashAlgs where
+    toEncoding = genericToEncoding defaultOptions
+
+instance FromJSON HashAlgs where
+
 data HashOpts
   = HashOpts {_hashOpts_hashAlgs :: !(Maybe HashAlgs)}
   deriving (Show, Read, Eq, Ord, Data, Typeable, Generic)
+
+instance ToJSON HashOpts where
+    toEncoding = genericToEncoding defaultOptions
+
+instance FromJSON HashOpts where
 
 instance Default HashOpts where
   def = HashOpts Nothing
@@ -783,6 +877,11 @@ data DebugOpts
         _debugOpts_abi :: !(Maybe Text)
       }
   deriving (Read, Show, Eq, Ord, Data, Typeable, Generic)
+
+instance ToJSON DebugOpts where
+    toEncoding = genericToEncoding defaultOptions
+
+instance FromJSON DebugOpts where
 
 instance Default DebugOpts where
   def = DebugOpts Nothing Nothing Nothing Nothing
@@ -807,6 +906,11 @@ data VersOrdering
   | PipArbitraryEq
   deriving (Read, Eq, Ord, Enum, Data, Typeable, Generic)
 
+instance ToJSON VersOrdering where
+    toEncoding = genericToEncoding defaultOptions
+
+instance FromJSON VersOrdering where
+
 instance Show VersOrdering where
   show PipGT = ">"
   show PipGTorEq = ">="
@@ -824,6 +928,11 @@ data PkgVersion
   | VersArb !Text
   deriving (Read, Eq, Ord, Data, Typeable, Generic)
 
+instance ToJSON PkgVersion where
+    toEncoding = genericToEncoding defaultOptions
+
+instance FromJSON PkgVersion where
+
 instance Show PkgVersion where
   show (VersMaj n) = show n
   show (VersMin m n) = show m <> "." <> show n
@@ -836,6 +945,11 @@ data ReqSpec
   , _reqSpec_version :: !(Maybe (VersOrdering, PkgVersion))
   }
   deriving (Read, Eq, Ord, Data, Typeable, Generic)
+
+instance ToJSON ReqSpec where
+    toEncoding = genericToEncoding defaultOptions
+
+instance FromJSON ReqSpec where
 
 instance Show ReqSpec where
   show (ReqSpec t Nothing) = T.unpack t
@@ -856,6 +970,11 @@ data PipInput
   | ReqSpecInput [ReqSpec]
   deriving (Read, Show, Eq, Ord, Data, Typeable, Generic)
 
+instance ToJSON PipInput where
+    toEncoding = genericToEncoding defaultOptions
+
+instance FromJSON PipInput where
+
 instance Input PipInput where
   fmtInput (URLInput urls) = urls
   fmtInput (FileInput fps) = fps
@@ -868,6 +987,11 @@ data UninstallInput
   | UnInstFiles FileList
   deriving (Read, Show, Eq, Ord, Data, Typeable, Generic)
 
+instance ToJSON UninstallInput where
+    toEncoding = genericToEncoding defaultOptions
+
+instance FromJSON UninstallInput where
+
 instance Input UninstallInput where
   fmtInput (UnInstPkgs pkgs) = pkgs
   fmtInput (UnInstFiles files) = files
@@ -878,6 +1002,11 @@ data ConfigInput
   | Get Text
   | Set Text Text
   | Unset Text
+
+instance ToJSON ConfigInput where
+    toEncoding = genericToEncoding defaultOptions
+
+instance FromJSON ConfigInput where
 
 instance Input ConfigInput where
   fmtInput List = ["list"]
