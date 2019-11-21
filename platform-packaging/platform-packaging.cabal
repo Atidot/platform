@@ -30,6 +30,7 @@ library
                      , text
                      , free
                      , containers
+                     , language-python
                      , shelly
                      , shellmet
                      , dockerfile

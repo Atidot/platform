@@ -7,6 +7,7 @@ module Platform.Packaging.PythonImports where
 import "base" GHC.Generics (Generic)
 import "base" Data.Typeable (Typeable)
 import "base" Data.Data (Data)
+import "base" Data.List (foldl')
 import "aeson" Data.Aeson (FromJSON, ToJSON, toEncoding, genericToEncoding, defaultOptions)
 import "language-python" Language.Python.Common.AST 
 import Platform.Packaging.Pip
@@ -24,13 +25,7 @@ instance ToJSON PyPkg where
 
 instance FromJSON PyPkg where
 
-newtype Module
-    = Module 
-    { _module_names :: ![Text] 
-    } deriving (Show, Read, Eq, Ord, Data, Typeable, Generic)
-
-instance Ord (Module, PypiPkg) where
-    cmp p1 p2 = undefined
+type ModuleNames = [Text]
 
 extractPkgs :: FilePath -> IO [PypiPkg]
 extract = undefined
@@ -50,10 +45,19 @@ getImports :: Module -> [Statement]
 getImports (Module statements) = map getImports' statements
   where getImports' i@Imports{} = i
         getImports' f@FromImports{} = f
-        getImports' w@While{} = (getImports . while_body) w ++ (getImports . while_else) w
-        getImports' f@For{} = (getImports . for_body) f ++ (getImports . for_else) f
+        getImports' w@While{} = mapInto [while_body w, while_else w]
+        getImports' f@For{} = mapInto [for_body f, for_else f]
+        getImports' a@AsyncFor{} = mapInto [for_stmt a]
+        getImports' f@Fun{} = mapInto [fun_body f]
+        getImports' a@AsyncFun{} = mapInto [fun_def a]
+        getImports' c@Class{} = mapInto [class_body c]
+        getImports' c@Conditional{} = mapInto [map snd $ cond_guards c, cond_else c]
+        getImports' d@Decorated{} = getImports $ decorated_def d
+        getImports' t@Try{} = mapInto [try_body t, try_else t, try_finally t]
+        getImports' w@With{} = mapInto [with_body w]
+        getImports' a@AsyncWith{} = getImports $ with_stmt a
         getImports' _ = []
-
+        mapInto ss = mconcat (map getImports ss)
 
 isImport :: Statement -> Bool
 isImport Import{} = True
