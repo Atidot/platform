@@ -21,7 +21,7 @@ library
   exposed-modules:    Platform.Packaging
                     , Platform.Packaging.Pip
                     , Platform.Packaging.PythonImports
-  other-modules:      Platform.Packaging.Types
+  other-modules:      Platform.Packaging.Pip.Types
   -- other-extensions:
   build-depends:       base
                      , lens

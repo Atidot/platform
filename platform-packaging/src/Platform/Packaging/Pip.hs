@@ -12,8 +12,8 @@ import "text" Data.Text (Text)
 import qualified "text" Data.Text as T
 import "base" Data.Typeable (Typeable)
 import "base" GHC.Generics (Generic)
-import Platform.Packaging.Pip.Types
 import "shellmet" Shellmet (($|))
+import Platform.Packaging.Pip.Types
 
 -- Do not export this, as it's not very type-safe.
 -- It exists because several of the commands have identical
