@@ -4,7 +4,7 @@
 {-# LANGUAGE PackageImports #-}
 
 module Platform.Packaging.Pip 
-    (install, download, uninstall, freeze, list, show, search, check, config, wheel, hash, debug, UpgradeStrategy, FormatControl, ProgressBar, InstallOpts, DownloadOpts, UninstallOpts, FreezeOpts, ListOpts, ShowOpts, SearchOpts, CheckOpts, ConfigOpts, WheelOpts, HashOpts, DebugOpts, PipInput, ConfigInput) where
+    (install, download, uninstall, freeze, list, pipShow, search, check, config, wheel, hash, debug, UpgradeStrategy, FormatControl, OutputFormat, ProgressBar, HashAlgs, InstallOpts, DownloadOpts, UninstallOpts, FreezeOpts, ListOpts, ShowOpts, SearchOpts, CheckOpts, ConfigOpts, WheelOpts, HashOpts, DebugOpts, PipInput, UninstallInput, ConfigInput) where
 
 import "base" Data.Data (Data)
 import "data-default" Data.Default (Default, def)
@@ -25,45 +25,46 @@ pipCmd ::
   a ->
   PipInput ->
   IO Text
-pipCmd command input gOpts opts =
+pipCmd command gOpts opts input =
   pip $ command : fmtOpts gOpts ++ fmtOpts opts ++ fmtInput input
 
 install ::
-  GeneralOpts
+  GeneralOpts ->
   InstallOpts ->
   PipInput ->
   IO Text
 install = pipCmd "install" 
 
 download ::
-  GeneralOpts
+  GeneralOpts ->
   DownloadOpts ->
   PipInput ->
   IO Text
 download = pipCmd "download"
 
 uninstall ::
-  GeneralOpts
+  GeneralOpts ->
   UninstallOpts ->
   UninstallInput ->
   IO Text
-uninstall = pipCmd "uninstall" 
+uninstall gOpts opts input 
+  = pip $ "uninstall" : fmtOpts gOpts ++ fmtOpts opts ++ fmtInput input
 
 freeze :: GeneralOpts -> FreezeOpts -> IO Text
 freeze gOpts opts = pip $ "freeze" : fmtOpts gOpts ++ fmtOpts opts
 
-list :: ListOpts -> IO Text
+list :: GeneralOpts -> ListOpts -> IO Text
 list gOpts opts = pip $ "list" : fmtOpts gOpts ++ fmtOpts opts
 
-show ::
+pipShow ::
   GeneralOpts ->
   ShowOpts ->
   PkgList ->
   IO Text
-show gOpts opts pkgs = pip $ "show" : fmtOpts gOpts ++ fmtOpts opts ++ pkgs
+pipShow gOpts opts pkgs = pip $ "show" : fmtOpts gOpts ++ fmtOpts opts ++ pkgs
 
 search ::
-  GeneralOpts
+  GeneralOpts ->
   SearchOpts ->
   Text ->
   IO Text
@@ -77,7 +78,7 @@ config ::
   ConfigOpts ->
   ConfigInput ->
   IO Text
-config = pipCmd "config"
+config gOpts opts input = pip $ "config" : fmtOpts gOpts ++ fmtOpts opts ++ fmtInput input
 
 wheel ::
   GeneralOpts ->
@@ -93,5 +94,8 @@ hash ::
   IO Text
 hash gOpts opts fps = pip $ "hash" : fmtOpts gOpts ++ fmtOpts opts ++ fps
 
-debug :: DebugOpts -> IO Text
+debug :: GeneralOpts -> DebugOpts -> IO Text
 debug gOpts opts = pip $ "debug" : fmtOpts gOpts ++ fmtOpts opts
+
+pip :: [Text] -> IO Text
+pip = ($|) "pip" 
