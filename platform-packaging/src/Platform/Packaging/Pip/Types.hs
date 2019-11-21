@@ -40,7 +40,7 @@ import           "base"         Data.Char (toLower)
 import           "base"         Data.Data (Data)
 import           "base"         Data.Typeable (Typeable)
 import           "base"         GHC.Generics (Generic)
-import           "aeson"        Data.Aeson (ToJSON, FromJSON, toEncoding, genericTodEncoding, defaultOptions)
+import           "aeson"        Data.Aeson (ToJSON, FromJSON, toEncoding, genericToEncoding, defaultOptions)
 import           "text"         Data.Text (Text, intercalate)
 import qualified "text"         Data.Text as T
 import           "data-default" Data.Default (Default, def)
@@ -1072,7 +1072,7 @@ intPrint :: Text
          -> Maybe Int 
          -> Text
 intPrint _ Nothing = ""
-intPrint name (Just n) = "--" <> name <> " " <> T.pack $ show n
+intPrint name (Just n) = "--" <> name <> " " <> (T.pack . show) n
 
 noEmpty :: [Text] -> [Text]
 noEmpty = filter (/= "")
