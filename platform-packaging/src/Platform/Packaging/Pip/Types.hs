@@ -1020,42 +1020,44 @@ ifJust :: Maybe Text -> Text
 ifJust Nothing = ""
 ifJust (Just t) = t
 
-txtPrint :: Text 
-         -> Maybe Text 
+optPrint :: (a -> Text) 
+         -> Text 
+         -> Maybe a
          -> Text
-txtPrint _ Nothing = ""
-txtPrint optName (Just optVar)  = "--" <> optName <> " " <> optVar
+optPrint _ _ Nothing = ""
+optPrint f t (Just x) = "--" <> t <> f x
+
+txtPrint :: Text
+         -> Maybe Text
+         -> Text
+txtPrint = optPrint (\t -> " " <> t)
 
 boolPrint :: Text
           -> Maybe Bool
           -> Text
-boolPrint _ Nothing = ""
-boolPrint _ (Just False) = ""
-boolPrint optName (Just True) = "--" <> optName
+boolPrint = optPrint (const "")
 
 actionPrint :: Text 
             -> Maybe Action 
             -> Text
-actionPrint _ Nothing = ""
-actionPrint name (Just action) = "--" <> name <> " " <> ap' action
-  where ap' SwitchAction = "s"
-        ap' IgnoreAction = "i"
-        ap' WipeAction = "w"
-        ap' BackupAction = "b"
-        ap' AbortAction = "a"
+actionPrint = optPrint (\a -> " " <> ap a)
+  where ap SwitchAction = "s"
+        ap IgnoreAction = "i"
+        ap WipeAction = "w"
+        ap BackupAction = "b"
+        ap AbortAction = "a"
 
 controlPrint :: Text 
              -> Maybe FormatControl
              -> Text
-controlPrint _ Nothing = ""
-controlPrint name (Just All) = "--" <> name <> " :all:"
-controlPrint name (Just None) = "--" <> name <> " :none:"
-controlPrint name (Just (Pkgs ps)) = "--" <> name <> " " <> 
-  intercalate "," ps
+controlPrint = optPrint (\c -> " " <> cp c)
+    where cp All = ":all:"
+          cp None = ":none:"
+          cp (Pkgs ps) = intercalate "," ps
 
 progressPrint :: Maybe ProgressBar -> Text
-progressPrint Nothing = ""
-progressPrint (Just bar) = "--progress-bar " <> (T.pack . map toLower . show) bar
+progressPrint = optPrint (\b -> " " <> pb b) "progress-bar"
+    where pb = T.pack . map toLower . show
 
 formatPrint :: Text 
             -> Maybe OutputFormat 
@@ -1065,15 +1067,15 @@ formatPrint = undefined
 eitherPrint :: Text 
             -> Maybe (Either FilePathT URL) 
             -> Text
-eitherPrint _ Nothing = ""
-eitherPrint name (Just (Left t)) = "--" <> name <> " " <> t
-eitherPrint name (Just (Right t)) = "--" <> name <> " " <> t
+eitherPrint = optPrint (\e -> " " <> ep e)
+    where ep (Left t) = t
+          ep (Right t) = t
 
 intPrint :: Text 
          -> Maybe Int 
          -> Text
-intPrint _ Nothing = ""
-intPrint name (Just n) = "--" <> name <> " " <> (T.pack . show) n
+intPrint = optPrint (\n -> " " <> np n)
+    where np = T.pack . show
 
 noEmpty :: [Text] -> [Text]
 noEmpty = filter (/= "")

@@ -9,6 +9,7 @@ import "base" Data.Typeable (Typeable)
 import "base" Data.Data (Data)
 import "base" Data.List (foldl')
 import "aeson" Data.Aeson (FromJSON, ToJSON, toEncoding, genericToEncoding, defaultOptions)
+import "text" Data.Text (Text, pack)
 import "language-python" Language.Python.Common.AST 
 import Platform.Packaging.Pip
 
@@ -25,12 +26,10 @@ instance ToJSON PyPkg where
 
 instance FromJSON PyPkg where
 
-type ModuleNames = [Text]
-
-extractPkgs :: FilePath -> IO [PypiPkg]
+extractPkgs :: FilePath -> IO [PyPkg]
 extract = undefined
 
-extractModules :: FilePath -> IO [Module]
+extractModules :: FilePath -> IO ImportNames
 extractModules = undefined
 
 onlyImports = filter 
@@ -38,13 +37,15 @@ onlyImports = filter
 findMatches :: [Text] -> IO [PyPIPkg]
 findMatches = undefined
 
-pkgHasModule :: PypiPkg -> Module -> IO Bool
+pkgHasModule :: PyPkg 
+             -> Module 
+             -> IO Bool
 pkgHasModule = undefined
 
-getImports :: Module -> [Statement]
-getImports (Module statements) = map getImports' statements
-  where getImports' i@Imports{} = i
-        getImports' f@FromImports{} = f
+getImportNames :: Module -> [DottedName]
+getImportNames (Module statements) = onlyJust $ map getImports' statements
+  where getImports' i@Imports{} = map (return . import_item_name) $ import_items i
+        getImports' f@FromImports{} = map import_relative_module $ from_module f
         getImports' w@While{} = mapInto [while_body w, while_else w]
         getImports' f@For{} = mapInto [for_body f, for_else f]
         getImports' a@AsyncFor{} = mapInto [for_stmt a]
@@ -52,12 +53,24 @@ getImports (Module statements) = map getImports' statements
         getImports' a@AsyncFun{} = mapInto [fun_def a]
         getImports' c@Class{} = mapInto [class_body c]
         getImports' c@Conditional{} = mapInto [map snd $ cond_guards c, cond_else c]
-        getImports' d@Decorated{} = getImports $ decorated_def d
+        getImports' d@Decorated{} = getImports' $ decorated_def d
         getImports' t@Try{} = mapInto [try_body t, try_else t, try_finally t]
         getImports' w@With{} = mapInto [with_body w]
-        getImports' a@AsyncWith{} = getImports $ with_stmt a
+        getImports' a@AsyncWith{} = getImports' $ with_stmt a
         getImports' _ = []
-        mapInto ss = mconcat (map getImports ss)
+        mapInto = concatMap getImports'
+        onlyJust (Nothing : xs) = xs
+        onlyJust (Just x : xs) = x : onlyJust xs
+        onlyJust [] = []
+
+-- for TopLevel.MidLevel.ModName, this would guess
+--   "TopLevel" > "TopLevel MidLevel" > "TopLevel MidLevel ModName"
+-- > "MidLevel" > "MidLevel ModName" > "ModName"
+-- Perhaps there are better guessing orders, but this one seems pretty reasonable.
+pkgGuesses :: DottedName -> [Text]
+pkgGuesses = map (pack . unwords) . supLevelSets
+    where supLevelSets (x:xs) = (x:xs) : supLevelSets xs
+          supLevelSets [] = []
 
 isImport :: Statement -> Bool
 isImport Import{} = True
