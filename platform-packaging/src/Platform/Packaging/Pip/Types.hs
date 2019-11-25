@@ -1035,7 +1035,8 @@ txtPrint = optPrint (\t -> " " <> t)
 boolPrint :: Text
           -> Maybe Bool
           -> Text
-boolPrint = optPrint (const "")
+boolPrint t (Just True) = "--" <> t
+boolPrint _ _ = ""
 
 actionPrint :: Text 
             -> Maybe Action 
@@ -1062,7 +1063,8 @@ progressPrint = optPrint (\b -> " " <> pb b) "progress-bar"
 formatPrint :: Text 
             -> Maybe OutputFormat 
             -> Text
-formatPrint = undefined
+formatPrint = optPrint (\f -> " " <> fp f)
+    where fp
 
 eitherPrint :: Text 
             -> Maybe (Either FilePathT URL) 

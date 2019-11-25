@@ -27,14 +27,14 @@ instance ToJSON PyPkg where
 instance FromJSON PyPkg where
 
 extractPkgs :: FilePath -> IO [PyPkg]
-extract = undefined
+extractPkgs = undefined
 
 extractModules :: FilePath -> IO ImportNames
 extractModules = undefined
 
 onlyImports = filter 
 
-findMatches :: [Text] -> IO [PyPIPkg]
+findMatches :: [Text] -> IO [PyPkg]
 findMatches = undefined
 
 pkgHasModule :: PyPkg 
@@ -44,8 +44,8 @@ pkgHasModule = undefined
 
 getImportNames :: Module -> [DottedName]
 getImportNames (Module statements) = onlyJust $ map getImports' statements
-  where getImports' i@Imports{} = map (return . import_item_name) $ import_items i
-        getImports' f@FromImports{} = map import_relative_module $ from_module f
+  where getImports' i@Import{} = map (return . import_item_name) $ import_items i
+        getImports' f@FromImport{} = map import_relative_module $ from_module f
         getImports' w@While{} = mapInto [while_body w, while_else w]
         getImports' f@For{} = mapInto [for_body f, for_else f]
         getImports' a@AsyncFor{} = mapInto [for_stmt a]
