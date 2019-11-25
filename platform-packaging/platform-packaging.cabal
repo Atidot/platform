@@ -31,7 +31,7 @@ library
                      , free
                      , containers
                      , language-python
-                     , regex-tdfa
+                     , regex-tdfa-text
                      , shelly
                      , shellmet
                      , dockerfile

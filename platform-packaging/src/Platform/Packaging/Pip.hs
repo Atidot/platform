@@ -6,16 +6,16 @@
 module Platform.Packaging.Pip 
     (install, download, uninstall, freeze, list, pipShow, search, searchAndListNames, check, config, wheel, hash, debug, UpgradeStrategy, FormatControl, OutputFormat, ProgressBar, HashAlgs, InstallOpts, DownloadOpts, UninstallOpts, FreezeOpts, ListOpts, ShowOpts, SearchOpts, CheckOpts, ConfigOpts, WheelOpts, HashOpts, DebugOpts, PipInput, UninstallInput, ConfigInput) where
 
-import           "base"         Data.Data (Data)
-import           "data-default" Data.Default (Default, def)
-import           "text"         Data.Text (Text)
-import qualified "text"         Data.Text as T
-import           "base"         Data.Typeable (Typeable)
-import           "base"         GHC.Generics (Generic)
-import           "regex-tdfa"   Text.Regex.TDFA
-import           "regex-tdfa"   Text.Regex.TDFA.Text ()
-import           "shellmet"     Shellmet (($|))
-import                          Platform.Packaging.Pip.Types
+import           "base"            Data.Data (Data)
+import           "data-default"    Data.Default (Default, def)
+import           "text"            Data.Text (Text)
+import qualified "text"            Data.Text as T
+import           "base"            Data.Typeable (Typeable)
+import           "base"            GHC.Generics (Generic)
+import           "regex-tdfa"      Text.Regex.TDFA
+import           "regex-tdfa-text" Text.Regex.TDFA.Text ()
+import           "shellmet"        Shellmet (($|))
+import                             Platform.Packaging.Pip.Types
 
 -- Do not export this, as it allows e.g. InstallOpts to be used with "wheel".
 -- It exists because several of the commands have identical
