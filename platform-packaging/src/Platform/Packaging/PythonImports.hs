@@ -41,7 +41,7 @@ extractModules :: FilePath -> IO [ModuleName]
 extractModules = undefined
 
 findPossibleMatches :: ModuleName -> IO [PyPkg]
-findMatches = undefined
+findPossibleMatches = undefined
 
 findMatch :: ModuleName -> IO PyPkg
 findMatch = undefined
