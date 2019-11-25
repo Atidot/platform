@@ -29,7 +29,7 @@ instance FromJSON PyPkg where
 extractPkgs :: FilePath -> IO [PyPkg]
 extractPkgs = undefined
 
-extractModules :: FilePath -> IO ImportNames
+extractModules :: FilePath -> IO [Text]
 extractModules = undefined
 
 onlyImports = filter 
