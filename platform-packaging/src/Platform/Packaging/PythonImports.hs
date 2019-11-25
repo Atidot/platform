@@ -9,6 +9,7 @@ import "base" Data.Typeable (Typeable)
 import "base" Data.Data (Data)
 import "base" Data.List (foldl')
 import "aeson" Data.Aeson (FromJSON, ToJSON, toEncoding, genericToEncoding, defaultOptions)
+import "data-default" Data.Default (def)
 import "text" Data.Text (Text, pack)
 import "language-python" Language.Python.Common.AST 
 import Platform.Packaging.Pip
@@ -26,7 +27,7 @@ instance ToJSON PyPkg where
 
 instance FromJSON PyPkg where
 
-newtype ModuleName = ModuleName { _moduleName :: !Text }
+data ModuleName = ModuleName { _moduleName :: !Text }
     deriving (Show, Read, Eq, Ord, Data, Typeable, Generic)
 
 instance ToJSON ModuleName where 
@@ -41,7 +42,10 @@ extractModules :: FilePath -> IO [ModuleName]
 extractModules = undefined
 
 findPossibleMatches :: ModuleName -> IO [PyPkg]
-findPossibleMatches = undefined
+findPossibleMatches = fmap (map pkg) . searchAndListNames def def . _moduleName
+
+pkg :: Text -> PyPkg
+pkg = undefined
 
 findMatch :: ModuleName -> IO PyPkg
 findMatch = undefined

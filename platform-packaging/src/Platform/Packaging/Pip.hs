@@ -4,7 +4,7 @@
 {-# LANGUAGE PackageImports #-}
 
 module Platform.Packaging.Pip 
-    (install, download, uninstall, freeze, list, pipShow, search, check, config, wheel, hash, debug, UpgradeStrategy, FormatControl, OutputFormat, ProgressBar, HashAlgs, InstallOpts, DownloadOpts, UninstallOpts, FreezeOpts, ListOpts, ShowOpts, SearchOpts, CheckOpts, ConfigOpts, WheelOpts, HashOpts, DebugOpts, PipInput, UninstallInput, ConfigInput) where
+    (install, download, uninstall, freeze, list, pipShow, search, searchAndListNames, check, config, wheel, hash, debug, UpgradeStrategy, FormatControl, OutputFormat, ProgressBar, HashAlgs, InstallOpts, DownloadOpts, UninstallOpts, FreezeOpts, ListOpts, ShowOpts, SearchOpts, CheckOpts, ConfigOpts, WheelOpts, HashOpts, DebugOpts, PipInput, UninstallInput, ConfigInput) where
 
 import           "base"         Data.Data (Data)
 import           "data-default" Data.Default (Default, def)
@@ -12,6 +12,8 @@ import           "text"         Data.Text (Text)
 import qualified "text"         Data.Text as T
 import           "base"         Data.Typeable (Typeable)
 import           "base"         GHC.Generics (Generic)
+import           "regex-tdfa"   Text.Regex.TDFA
+import           "regex-tdfa"   Text.Regex.TDFA.Text ()
 import           "shellmet"     Shellmet (($|))
 import                          Platform.Packaging.Pip.Types
 
@@ -67,6 +69,14 @@ search :: GeneralOpts
        -> Text 
        -> IO Text
 search gOpts opts pkg = pip $ "search" : fmtOpts gOpts ++ fmtOpts opts ++ [pkg]
+
+searchAndListNames :: GeneralOpts
+                   -> SearchOpts
+                   -> Text
+                   -> IO [Text]
+searchAndListNames g o p = do
+    t <- search g o p
+    return $ getAllTextMatches (t =~ "^(-|\\w|\\d)+")
 
 check :: GeneralOpts 
       -> CheckOpts 
