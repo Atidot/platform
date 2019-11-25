@@ -26,42 +26,56 @@ instance ToJSON PyPkg where
 
 instance FromJSON PyPkg where
 
+newtype ModuleName = ModuleName { _moduleName :: !Text }
+    deriving (Show, Read, Eq, Ord, Data, Typeable, Generic)
+
+instance ToJSON ModuleName where 
+    toEncoding = genericToEncoding defaultOptions
+
+instance FromJSON ModuleName where
+
 extractPkgs :: FilePath -> IO [PyPkg]
 extractPkgs = undefined
 
-extractModules :: FilePath -> IO [Text]
+extractModules :: FilePath -> IO [ModuleName]
 extractModules = undefined
 
-onlyImports = filter 
-
-findMatches :: [Text] -> IO [PyPkg]
+findPossibleMatches :: ModuleName -> IO [PyPkg]
 findMatches = undefined
 
+findMatch :: ModuleName -> IO PyPkg
+findMatch = undefined
+
 pkgHasModule :: PyPkg 
-             -> Module annot
+             -> ModuleName
              -> IO Bool
 pkgHasModule = undefined
 
 getImportNames :: Module annot -> [DottedName annot]
-getImportNames (Module statements) = onlyJust $ map getImports' statements
-  where getImports' i@Import{} = map (return . import_item_name) $ import_items i
-        getImports' f@FromImport{} = map import_relative_module $ from_module f
-        getImports' w@While{} = mapInto [while_body w, while_else w]
-        getImports' f@For{} = mapInto [for_body f, for_else f]
-        getImports' a@AsyncFor{} = mapInto [for_stmt a]
-        getImports' f@Fun{} = mapInto [fun_body f]
-        getImports' a@AsyncFun{} = mapInto [fun_def a]
-        getImports' c@Class{} = mapInto [class_body c]
-        getImports' c@Conditional{} = mapInto [map snd $ cond_guards c, cond_else c]
-        getImports' d@Decorated{} = getImports' $ decorated_def d
-        getImports' t@Try{} = mapInto [try_body t, try_else t, try_finally t]
-        getImports' w@With{} = mapInto [with_body w]
-        getImports' a@AsyncWith{} = getImports' $ with_stmt a
-        getImports' _ = []
-        mapInto = concatMap getImports'
+getImportNames (Module statements) = onlyJust . concatMap getImports' $ statements
+  where getImports' :: Statement annot -> [Maybe (DottedName annot)]
+        getImports' i@Import{}      = map (return . import_item_name) . import_items $ i
+        getImports' f@FromImport{}  = return . import_relative_module . from_module $ f
+        getImports' w@While{}       = recurse . (while_body <> while_else) $ w
+        getImports' f@For  {}       = recurse . (for_body <> for_else) $ f
+        getImports' a@AsyncFor{}    = recurse . for_stmt $ a
+        getImports' f@Fun{}         = recurse . fun_body $ f
+        getImports' a@AsyncFun{}    = recurse . fun_def $ a
+        getImports' c@Class{}       = recurse . class_body $ c
+        getImports' c@Conditional{} = recurse . ((map snd . cond_guards) <> cond_else) $ c
+        getImports' d@Decorated{}   = recurse . decorated_def $ d
+        getImports' t@Try{}         = recurse . (try_body <> try_else <> try_finally) $ t
+        getImports' w@With{}        = recurse . with_body $ w
+        getImports' a@AsyncWith{}   = recurse . with_stmt $ a
+        getImports' _               = []
+
+        recurse :: [Statement annot] -> [Maybe (DottedName annot)]
+        recurse = concatMap getImports'
+
+        onlyJust :: [Maybe a] -> [a]
         onlyJust (Nothing : xs) = onlyJust xs
-        onlyJust (Just x : xs) = x : onlyJust xs
-        onlyJust [] = []
+        onlyJust (Just x : xs)  = x : onlyJust xs
+        onlyJust []             = []
 
 -- for TopLevel.MidLevel.ModName, this would guess
 --   "TopLevel" > "TopLevel MidLevel" > "TopLevel MidLevel ModName"
@@ -71,8 +85,3 @@ pkgGuesses :: DottedName annot -> [Text]
 pkgGuesses = map (pack . unwords) . supLevelSets . map ident_string
     where supLevelSets (x:xs) = (x:xs) : supLevelSets xs
           supLevelSets [] = []
-
-isImport :: Statement annot -> Bool
-isImport Import{} = True
-isImport FromImport{} = True
-isImport _ = False
