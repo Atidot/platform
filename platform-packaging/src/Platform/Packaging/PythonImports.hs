@@ -38,11 +38,11 @@ findMatches :: [Text] -> IO [PyPkg]
 findMatches = undefined
 
 pkgHasModule :: PyPkg 
-             -> Module 
+             -> Module annot
              -> IO Bool
 pkgHasModule = undefined
 
-getImportNames :: Module -> [DottedName]
+getImportNames :: Module annot -> [DottedName annot]
 getImportNames (Module statements) = onlyJust $ map getImports' statements
   where getImports' i@Import{} = map (return . import_item_name) $ import_items i
         getImports' f@FromImport{} = map import_relative_module $ from_module f
@@ -67,12 +67,12 @@ getImportNames (Module statements) = onlyJust $ map getImports' statements
 --   "TopLevel" > "TopLevel MidLevel" > "TopLevel MidLevel ModName"
 -- > "MidLevel" > "MidLevel ModName" > "ModName"
 -- Perhaps there are better guessing orders, but this one seems pretty reasonable.
-pkgGuesses :: DottedName -> [Text]
-pkgGuesses = map (pack . unwords) . supLevelSets
+pkgGuesses :: DottedName annot -> [Text]
+pkgGuesses = map (pack . unwords) . supLevelSets . map ident_string
     where supLevelSets (x:xs) = (x:xs) : supLevelSets xs
           supLevelSets [] = []
 
-isImport :: Statement -> Bool
+isImport :: Statement annot -> Bool
 isImport Import{} = True
 isImport FromImport{} = True
 isImport _ = False
