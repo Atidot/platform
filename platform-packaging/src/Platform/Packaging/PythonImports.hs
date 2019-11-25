@@ -59,7 +59,7 @@ getImportNames (Module statements) = onlyJust $ map getImports' statements
         getImports' a@AsyncWith{} = getImports' $ with_stmt a
         getImports' _ = []
         mapInto = concatMap getImports'
-        onlyJust (Nothing : xs) = xs
+        onlyJust (Nothing : xs) = onlyJust xs
         onlyJust (Just x : xs) = x : onlyJust xs
         onlyJust [] = []
 
