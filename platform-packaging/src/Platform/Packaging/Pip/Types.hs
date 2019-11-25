@@ -1064,7 +1064,7 @@ formatPrint :: Text
             -> Maybe OutputFormat 
             -> Text
 formatPrint = optPrint (\f -> " " <> fp f)
-    where fp
+    where fp = T.pack . map toLower . show
 
 eitherPrint :: Text 
             -> Maybe (Either FilePathT URL) 

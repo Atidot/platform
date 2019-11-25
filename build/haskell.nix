@@ -26,6 +26,7 @@ rec {
 
   projectPackages = hspkgs: {
     executor           = ease hspkgs.executor;
+    language-python    = ease hspkgs.language-python;
     stratosphere       = hspkgs.callCabal2nix "stratosphere"       "${stratosphereSrc}" {};
     platform-types     = hspkgs.callCabal2nix "platform-types"     "${platformTypesSrc}" {};
     platform-dsl       = hspkgs.callCabal2nix "platform-dsl"       "${platformDSLSrc}" {};
