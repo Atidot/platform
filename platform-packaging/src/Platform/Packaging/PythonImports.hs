@@ -15,12 +15,15 @@ import "base" System.IO
 import "aeson" Data.Aeson (FromJSON, ToJSON, toEncoding, genericToEncoding, defaultOptions)
 import "data-default" Data.Default (def)
 import "text" Data.Text (Text, pack)
+import "extra"      Data.Tuple.Extra ((&&&))
 import "exceptions" Control.Monad.Catch (MonadMask, MonadThrow, bracket)
 import "regex-tdfa" Text.Regex.TDFA
 import "language-python" Language.Python.Common.AST 
 import "language-python" Language.Python.Version2.Parser as V2
 import "language-python" Language.Python.Version3.Parser as V3
 import Platform.Packaging.Pip
+
+type URL = Text
 
 data PyPkg 
     = PyPkg
@@ -45,7 +48,7 @@ searchAndListNames :: (MonadMask m, MonadIO m)
                    => Text
                    -> m [Text]
 searchAndListNames pkg = do
-    t <- search def def pkg
+    t <- liftIO $ search def def pkg
     return . getAllTextMatches $ t =~ "^[^ ]+(?= )"
 
 pypiPkg :: Text -> PyPkg
@@ -54,7 +57,7 @@ pypiPkg = PyPkg "https://pypi.org/simple/"
 -- TODO: write some kind of exception instance for Language.Python.Common.ParseError
 getAST :: (MonadThrow m, MonadMask m, MonadIO m) 
        => FilePath 
-       -> m Module
+       -> m (Module annot)
 getAST fp = do
     let fileName = fp =~ "(?<=/)[^/]+$" -- capture from the final slash to EOL
     when (fileName == "") $ mThrow EXCEPTION
@@ -71,8 +74,8 @@ getAST fp = do
 
 findPossibleMatches :: (MonadMask m, MonadIO m)
                     => ModuleName 
-                    -> m (ModuleName, [PyPkg])
-findPossibleMatches = (m,) $ fmap (map pypiPkg) . searchAndListNames def def . _moduleName
+                    -> (ModuleName, m [PyPkg])
+findPossibleMatches = id &&& fmap (map pypiPkg) . searchAndListNames def def . _moduleName
 
 findMatch :: (MonadMask m, MonadIO m, MonadThrow m)
           => ModuleName 
@@ -95,15 +98,15 @@ getImportNames (Module statements) = onlyJust . concatMap getImports' $ statemen
         getImports' f@FromImport{}  = return . import_relative_module . from_module $ f
         getImports' w@While{}       = recurse . (while_body <> while_else) $ w
         getImports' f@For  {}       = recurse . (for_body <> for_else) $ f
-        getImports' a@AsyncFor{}    = recurse . for_stmt $ a
+        getImports' a@AsyncFor{}    = recurse . return . for_stmt $ a
         getImports' f@Fun{}         = recurse . fun_body $ f
-        getImports' a@AsyncFun{}    = recurse . fun_def $ a
+        getImports' a@AsyncFun{}    = recurse . return . fun_def $ a
         getImports' c@Class{}       = recurse . class_body $ c
         getImports' c@Conditional{} = recurse . ((map snd . cond_guards) <> cond_else) $ c
-        getImports' d@Decorated{}   = recurse . decorated_def $ d
+        getImports' d@Decorated{}   = recurse . return . decorated_def $ d
         getImports' t@Try{}         = recurse . (try_body <> try_else <> try_finally) $ t
         getImports' w@With{}        = recurse . with_body $ w
-        getImports' a@AsyncWith{}   = recurse . with_stmt $ a
+        getImports' a@AsyncWith{}   = recurse . return . with_stmt $ a
         getImports' _               = []
 
         recurse :: [Statement annot] -> [Maybe (DottedName annot)]
@@ -137,5 +140,5 @@ runPythonImports fp
         body _ = do
             importNames <- getImportNames <$> getAST fp
             possibleMatchesByImport <- map findPossibleMatches importNames
-            let matchActions = map (findMatch . snd) maybeMatchesPerImport
+            let matchActions = map (findMatch . snd) possibleMatchesByImport
             return []
