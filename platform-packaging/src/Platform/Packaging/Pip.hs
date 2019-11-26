@@ -4,7 +4,7 @@
 {-# LANGUAGE PackageImports #-}
 
 module Platform.Packaging.Pip 
-    (install, download, uninstall, freeze, list, pipShow, search, searchAndListNames, check, config, wheel, hash, debug, UpgradeStrategy, FormatControl, OutputFormat, ProgressBar, HashAlgs, InstallOpts, DownloadOpts, UninstallOpts, FreezeOpts, ListOpts, ShowOpts, SearchOpts, CheckOpts, ConfigOpts, WheelOpts, HashOpts, DebugOpts, PipInput, UninstallInput, ConfigInput) where
+    (install, download, uninstall, freeze, list, pipShow, search, check, config, wheel, hash, debug, UpgradeStrategy, FormatControl, OutputFormat, ProgressBar, HashAlgs, InstallOpts, DownloadOpts, UninstallOpts, FreezeOpts, ListOpts, ShowOpts, SearchOpts, CheckOpts, ConfigOpts, WheelOpts, HashOpts, DebugOpts, PipInput, UninstallInput, ConfigInput) where
 
 import           "base"            Data.Data (Data)
 import           "data-default"    Data.Default (Default, def)
@@ -69,11 +69,6 @@ search :: GeneralOpts
        -> Text 
        -> IO Text
 search gOpts opts pkg = pip $ "search" : fmtOpts gOpts ++ fmtOpts opts ++ [pkg]
-
-searchAndListNames :: Text -> IO [Text]
-searchAndListNames p = do
-    t <- search def def p
-    return $ getAllTextMatches (t =~ "^(_|-|\\w|\\d)+") :: [Text]
 
 check :: GeneralOpts 
       -> CheckOpts 

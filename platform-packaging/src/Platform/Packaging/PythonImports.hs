@@ -41,6 +41,13 @@ instance ToJSON ModuleName where
 
 instance FromJSON ModuleName where
 
+searchAndListNames :: (MonadMask m, MonadIO m)
+                   => Text
+                   -> m [Text]
+searchAndListNames pkg = do
+    t <- search def def pkg
+    return . getAllTextMatches $ t =~ "^[^ ]+(?= )"
+
 pypiPkg :: Text -> PyPkg
 pypiPkg = PyPkg "https://pypi.org/simple/"
 
