@@ -1,20 +1,26 @@
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PackageImports #-}
 {-# LANGUAGE DeriveDataTypeable #-}
 module Platform.Packaging.PythonImports where
 
-import "base" GHC.Generics (Generic)
+import "base" Control.Monad.IO.Class (MonadIO)
+import "base" Control.Monad (when, unless)
 import "base" Data.Typeable (Typeable)
 import "base" Data.Data (Data)
 import "base" Data.List (foldl')
+import "base" GHC.Generics (Generic)
+import "base" System.IO
 import "aeson" Data.Aeson (FromJSON, ToJSON, toEncoding, genericToEncoding, defaultOptions)
 import "data-default" Data.Default (def)
 import "text" Data.Text (Text, pack)
+import "exceptions" Control.Monad.Catch (MonadMask, MonadThrow, bracket)
+import "regex-tdfa" Text.Regex.TDFA
 import "language-python" Language.Python.Common.AST 
+import "language-python" Language.Python.Version2.Parser as V2
+import "language-python" Language.Python.Version3.Parser as V3
 import Platform.Packaging.Pip
-
-type URL = Text
 
 data PyPkg 
     = PyPkg
@@ -35,20 +41,40 @@ instance ToJSON ModuleName where
 
 instance FromJSON ModuleName where
 
-extractPkgs :: FilePath -> IO [PyPkg]
-extractPkgs = undefined
+pypiPkg :: Text -> PyPkg
+pypiPkg = PyPkg "https://pypi.org/simple/"
 
-extractModules :: FilePath -> IO [ModuleName]
-extractModules = undefined
+-- TODO: write some kind of exception instance for Language.Python.Common.ParseError
+getAST :: (MonadThrow m, MonadMask m, MonadIO m) 
+       => FilePath 
+       -> m Module
+getAST fp = do
+    let fileName = fp =~ "(?<=/)[^/]+$" -- capture from the final slash to EOL
+    when (fileName == "") $ mThrow EXCEPTION
+    handle <- openFile fp ReadMode
+    contents <- hGetContents handle
+    let parsed = V3.parseModule contents fileName
+    let finalParsed = if isRight parsed 
+                         then parsed 
+                         else V2.parseModule contents fileName
+    unless (isRight finalParsed) $ mThrow EXCEPTION
+    return finalParsed
+    where isRight (Right _) = True
+          isRight _         = False 
 
-findPossibleMatches :: ModuleName -> IO [PyPkg]
-findPossibleMatches = fmap (map pkg) . searchAndListNames def def . _moduleName
+findPossibleMatches :: (MonadMask m, MonadIO m)
+                    => ModuleName 
+                    -> m (ModuleName, [PyPkg])
+findPossibleMatches = (m,) $ fmap (map pypiPkg) . searchAndListNames def def . _moduleName
 
-pkg :: Text -> PyPkg
-pkg = undefined
-
-findMatch :: ModuleName -> IO PyPkg
-findMatch = undefined
+findMatch :: (MonadMask m, MonadIO m, MonadThrow m)
+          => ModuleName 
+          -> [PyPkg] 
+          -> m PyPkg
+findMatch mn pkgs = do
+    candidates <- filter (pkgHasModule mn) pkgs
+    when (null candidates) $ mThrow EXCEPTION
+    return $ head candidates
 
 pkgHasModule :: PyPkg 
              -> ModuleName
@@ -89,3 +115,20 @@ pkgGuesses :: DottedName annot -> [Text]
 pkgGuesses = map (pack . unwords) . supLevelSets . map ident_string
     where supLevelSets (x:xs) = (x:xs) : supLevelSets xs
           supLevelSets [] = []
+
+runPythonImports :: (MonadMask m, MonadIO m)
+                 => FilePath
+                 -> m [PyPkg]
+runPythonImports fp
+    = bracket init'
+              fini
+              body
+    where
+        init'  = return ()
+        fini _ = return ()
+        
+        body _ = do
+            importNames <- getImportNames <$> getAST fp
+            possibleMatchesByImport <- map findPossibleMatches importNames
+            let matchActions = map (findMatch . snd) maybeMatchesPerImport
+            return []

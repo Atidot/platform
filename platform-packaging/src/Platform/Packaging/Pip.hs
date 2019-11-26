@@ -70,13 +70,10 @@ search :: GeneralOpts
        -> IO Text
 search gOpts opts pkg = pip $ "search" : fmtOpts gOpts ++ fmtOpts opts ++ [pkg]
 
-searchAndListNames :: GeneralOpts
-                   -> SearchOpts
-                   -> Text
-                   -> IO [Text]
-searchAndListNames g o p = do
-    t <- search g o p
-    return $ getAllTextMatches (t =~ "^(-|\\w|\\d)+")
+searchAndListNames :: Text -> IO [Text]
+searchAndListNames p = do
+    t <- search def def p
+    return $ getAllTextMatches (t =~ "^(_|-|\\w|\\d)+")
 
 check :: GeneralOpts 
       -> CheckOpts 
