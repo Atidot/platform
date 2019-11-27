@@ -16,7 +16,7 @@ import "aeson" Data.Aeson (FromJSON, ToJSON, toEncoding, genericToEncoding, defa
 import "data-default" Data.Default (def)
 import "text" Data.Text (Text, pack)
 import "extra"      Data.Tuple.Extra ((&&&))
-import "exceptions" Control.Monad.Catch (MonadMask, MonadThrow, bracket)
+import "exceptions" Control.Monad.Catch (Exception, MonadMask, MonadThrow, bracket)
 import "regex-tdfa" Text.Regex.TDFA
 import "regex-tdfa-text" Text.Regex.TDFA.Text ()
 import "language-python" Language.Python.Common.AST 
@@ -49,7 +49,7 @@ data RegexFailure = RegexFailure
     deriving (Show, Read, Eq, Ord, Bounded, Enum, Data, Typeable, Generic)
 
 instance Show RegexFailure where
-    show NoMatches = "There was a failure to match on a regex that was expected to have at least one match."
+    show RegexFailure = "There was a failure to match on a regex that was expected to have at least one match."
 
 instance Exception RegexFailure
 
@@ -74,7 +74,7 @@ searchAndListNames :: (MonadMask m, MonadIO m)
                    -> m [Text]
 searchAndListNames pkg = do
     t <- liftIO $ search def def pkg
-    return (getAllTextMatches (t =~ "^[^ ]+(?= )") :: [Text])
+    return $ getAllTextMatches (t =~ ("^[^ ]+(?= )" :: Text))
 
 pypiPkg :: Text -> PyPkg
 pypiPkg = PyPkg "https://pypi.org/simple/"
