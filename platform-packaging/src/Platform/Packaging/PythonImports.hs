@@ -18,6 +18,7 @@ import "text" Data.Text (Text, pack)
 import "extra"      Data.Tuple.Extra ((&&&))
 import "exceptions" Control.Monad.Catch (Exception, MonadMask, MonadThrow, throwM, bracket)
 import "regex-tdfa" Text.Regex.TDFA
+import "regex-tdfa-text" Text.Regex.TDFA.Text ()
 import "language-python" Language.Python.Common.AST 
 import "language-python" Language.Python.Common.SrcLocation (SrcSpan)
 import qualified "language-python" Language.Python.Version2.Parser as V2
