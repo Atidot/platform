@@ -6,7 +6,7 @@
 module Platform.Packaging.PythonImports where
 
 import "base" Control.Monad.IO.Class (MonadIO, liftIO)
-import "base" Control.Monad (when, unless)
+import "base" Control.Monad (when, unless, filterM)
 import "base" Data.Typeable (Typeable)
 import "base" Data.Data (Data)
 import "base" Data.List (foldl', intercalate)
@@ -83,10 +83,11 @@ getAST fp = do
     let finalParsed = if isRight parsed 
                          then parsed 
                          else V2.parseModule contents fileName
-    unless (isRight finalParsed) $ throwM FileNotParseable
-    return finalParsed
+    return' finalParsed
     where isRight (Right _) = True
           isRight _         = False 
+          return' (Right p) = return p
+          return' (Left _) = throwM FileNotParseable
 
 findPossibleMatches :: (MonadMask m, MonadIO m)
                     => ModuleName 
@@ -100,7 +101,7 @@ findMatch :: (MonadMask m, MonadIO m, MonadThrow m)
           -> [PyPkg] 
           -> m PyPkg
 findMatch mn pkgs = do
-    candidates <- filter (flip pkgHasModule mn) pkgs
+    candidates <- filterM (`pkgHasModule` mn) pkgs
     when (null candidates) $ throwM ModuleInNoPackages
     return $ head candidates
 
