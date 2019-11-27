@@ -18,6 +18,7 @@ import "text" Data.Text (Text, pack)
 import "extra"      Data.Tuple.Extra ((&&&))
 import "exceptions" Control.Monad.Catch (MonadMask, MonadThrow, bracket)
 import "regex-tdfa" Text.Regex.TDFA
+import "regex-tdfa" Text.Regex.TDFA.Text ()
 import "language-python" Language.Python.Common.AST 
 import "language-python" Language.Python.Version2.Parser as V2
 import "language-python" Language.Python.Version3.Parser as V3
@@ -132,7 +133,7 @@ pkgGuesses = map (pack . unwords) . supLevelSets . map ident_string
 -- DottedName annot = [Ident annot]
 -- [Ident annot] -> [String] -> String -> Text
 dottedToModuleName :: DottedName annot -> ModuleName
-dottedToModuleName = pack . intercalate "," . map ident_string
+dottedToModuleName = ModuleName $ pack . intercalate "," . map ident_string
 
 runPythonImports :: (MonadMask m, MonadIO m)
                  => FilePath
@@ -148,5 +149,5 @@ runPythonImports fp
         body _ = do
             importNames <- map dottedToModuleName . getImportNames <$> getAST fp
             possibleMatchesByImport <- map findPossibleMatches importNames
-            let matchActions = uncurry findMatch possibleMatchesByImport
+            matchActions <- uncurry findMatch possibleMatchesByImport
             return []
