@@ -4,8 +4,11 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Main where
 
-import           "base"                    System.IO (stdin)
 import           "base"                    Data.Semigroup ((<>))
+import           "base"                    System.IO (stdin)
+import           "base"                    Data.Typeable (Typeable)
+import           "base"                    Data.Data (Data)
+import           "base"                    GHC.Generics (Generic)
 import           "directory"               System.Directory (getCurrentDirectory)
 import qualified "bytestring"              Data.ByteString.Lazy.Char8 as B8 (putStrLn)
 import           "data-default"            Data.Default (Default, def)
