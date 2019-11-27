@@ -9,7 +9,7 @@ import "base" Control.Monad.IO.Class (MonadIO, liftIO)
 import "base" Control.Monad (when, unless)
 import "base" Data.Typeable (Typeable)
 import "base" Data.Data (Data)
-import "base" Data.List (foldl')
+import "base" Data.List (foldl', intercalate)
 import "base" GHC.Generics (Generic)
 import "base" System.IO
 import "aeson" Data.Aeson (FromJSON, ToJSON, toEncoding, genericToEncoding, defaultOptions)
@@ -49,7 +49,7 @@ searchAndListNames :: (MonadMask m, MonadIO m)
                    -> m [Text]
 searchAndListNames pkg = do
     t <- liftIO $ search def def pkg
-    return . getAllTextMatches $ t =~ "^[^ ]+(?= )"
+    return $ getAllTextMatches (t =~ "^[^ ]+(?= )")
 
 pypiPkg :: Text -> PyPkg
 pypiPkg = PyPkg "https://pypi.org/simple/"
@@ -75,7 +75,9 @@ getAST fp = do
 findPossibleMatches :: (MonadMask m, MonadIO m)
                     => ModuleName 
                     -> (ModuleName, m [PyPkg])
-findPossibleMatches = id &&& (map pypiPkg <$> searchAndListNames def def . _moduleName)
+findPossibleMatches mn = do
+    pkgs <- map pypiPkg . searchAndListNames def def . _moduleName $ mn
+    return (mn, pkgs)
 
 findMatch :: (MonadMask m, MonadIO m, MonadThrow m)
           => ModuleName 
@@ -142,7 +144,7 @@ runPythonImports fp
         fini _ = return ()
         
         body _ = do
-            importNames <- map dottedToModuleNames . getImportNames <$> getAST fp
-            possibleMatchesByImport <- map findPossibleMatches importNames
+            importNames <- map dottedToModuleName . getImportNames <$> getAST fp
+            possibleMatchesByImport <- _ $ map findPossibleMatches importNames
             let matchActions = uncurry findMatch possibleMatchesByImport
             return []
