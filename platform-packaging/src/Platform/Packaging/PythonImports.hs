@@ -45,29 +45,20 @@ instance ToJSON ModuleName where
 
 instance FromJSON ModuleName where
 
-data RegexFailure = RegexFailure
+data PythonImportException 
+    = RegexFailure
+    | ModuleInNoPackages
+    | FileNotParseable
+    | NotAFilePath
     deriving (Read, Eq, Ord, Bounded, Enum, Data, Typeable, Generic)
 
-instance Show RegexFailure where
+instance Show PythonImportException where
     show RegexFailure = "There was a failure to match on a regex that was expected to have at least one match."
-
-instance Exception RegexFailure
-
-data ModuleInNoPackages = ModuleInNoPackages
-    deriving (Read, Eq, Ord, Bounded, Enum, Data, Typeable, Generic)
-
-instance Show ModuleInNoPackages where
     show ModuleInNoPackages = "No package was found exporting the appropriate module name."
-
-instance Exception ModuleInNoPackages
-
-data FileNotParseable = FileNotParseable
-    deriving (Read, Eq, Ord, Bounded, Enum, Data, Typeable, Generic)
-
-instance Show FileNotParseable where
     show FileNotParseable = "This file was not parsed as either Python 2 or Python 3."
+    show NotAFilePath = "A path to a file was expected, but this string is not one."
 
-instance Exception FileNotParseable
+instance Exception PythonImportException
 
 searchAndListNames :: (MonadMask m, MonadIO m)
                    => Text
@@ -85,7 +76,7 @@ getAST :: (MonadThrow m, MonadMask m, MonadIO m)
        -> m (Module annot)
 getAST fp = do
     let fileName = fp =~ "(?<=/)[^/]+$" -- capture from the final slash to EOL
-    when (fileName == "") $ throwM NoMatches
+    when (fileName == "") $ throwM NotAFilePath
     handle <- openFile fp ReadMode
     contents <- hGetContents handle
     let parsed = V3.parseModule contents fileName
@@ -101,7 +92,7 @@ findPossibleMatches :: (MonadMask m, MonadIO m)
                     => ModuleName 
                     -> m [PyPkg]
 findPossibleMatches mn = do
-    pkgs <- searchAndListNames def def . _moduleName $ mn
+    pkgs <- searchAndListNames $ _moduleName mn
     return $ map pypiPkg pkgs
 
 findMatch :: (MonadMask m, MonadIO m, MonadThrow m)
@@ -109,7 +100,7 @@ findMatch :: (MonadMask m, MonadIO m, MonadThrow m)
           -> [PyPkg] 
           -> m PyPkg
 findMatch mn pkgs = do
-    candidates <- filter (pkgHasModule mn) pkgs
+    candidates <- filter (flip pkgHasModule mn) pkgs
     when (null candidates) $ throwM ModuleInNoPackages
     return $ head candidates
 
@@ -158,7 +149,7 @@ pkgGuesses = map (pack . unwords) . supLevelSets . map ident_string
 dottedToModuleName :: DottedName annot -> ModuleName
 dottedToModuleName dn = ModuleName $ pack . intercalate "," . map ident_string $ dn
 
-runPythonImports :: (MonadMask m, MonadIO m)
+runPythonImports :: (Monad m, MonadMask m, MonadIO m)
                  => FilePath
                  -> m [PyPkg]
 runPythonImports fp
@@ -172,6 +163,10 @@ runPythonImports fp
         body _ = do
             importNames <- map dottedToModuleName . getImportNames <$> getAST fp
             possibleMatches <- map findPossibleMatches importNames
-            let matches' = zip importNames possibleMatches
-            let matchActions = map (uncurry findMatch) matches'
+            --let matches' = zip importNames possibleMatches
+            --let matchActions = map (uncurry findMatch) matches'
             return []
+
+            -- fp :: FilePath (getAST ->) m (Module annot) (getImportNames <$> ->)
+            -- m [DottedName annot] -> m [ModuleName] (given to) importNames
+            -- [ModuleName] -> [m [PyPkg]]
