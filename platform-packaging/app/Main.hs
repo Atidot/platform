@@ -1,6 +1,6 @@
 {-# LANGUAGE PackageImports #-}
 {-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE DerivateDataTypeable #-}
+{-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE OverloadedStrings #-}
 module Main where
 
