@@ -1,5 +1,4 @@
 {-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PackageImports #-}
 {-# LANGUAGE DeriveDataTypeable #-}
@@ -74,7 +73,7 @@ pypiPkg :: Text -> PyPkg
 pypiPkg = PyPkg "https://pypi.org/simple/"
 
 getAST :: (MonadThrow m, MonadMask m, MonadIO m) 
-       => FilePath 
+       => String 
        -> m (Module SrcSpan)
 getAST fp = do
     let afterLastSlashRegex = "(?<=/)[^/]+$" :: String-- capture from the final slash to EOL
@@ -157,21 +156,13 @@ dottedToModuleName dn = ModuleName $ pack . intercalate "," . map ident_string $
 runPythonImports :: (Monad m, MonadMask m, MonadIO m)
                  => FilePath
                  -> m [PyPkg]
-runPythonImports fp
-    = bracket init'
-              fini
-              body
-    where
-        init'  = return ()
-        fini _ = return ()
-        
-        body _ = do
-            importNames <- map dottedToModuleName . getImportNames <$> getAST fp
-            possibleMatches <- map findPossibleMatches importNames
-            --let matches' = zip importNames possibleMatches
-            --let matchActions = map (uncurry findMatch) matches'
-            return . map head $ possibleMatches
+runPythonImports fp = do
+    importNames <- map dottedToModuleName . getImportNames <$> getAST fp
+    possibleMatches <- map findPossibleMatches importNames
+    --let matches' = zip importNames possibleMatches
+    --let matchActions = map (uncurry findMatch) matches'
+    return . map head $ possibleMatches
 
-            -- fp :: FilePath (getAST ->) m (Module annot) (getImportNames <$> ->)
-            -- m [DottedName annot] -> m [ModuleName] (given to) importNames
-            -- [ModuleName] -> [m [PyPkg]]
+    -- fp :: FilePath (getAST ->) m (Module annot) (getImportNames <$> ->)
+    -- m [DottedName annot] -> m [ModuleName] (given to) importNames
+    -- [ModuleName] -> [m [PyPkg]]
