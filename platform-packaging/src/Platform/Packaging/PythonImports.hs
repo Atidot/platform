@@ -128,7 +128,7 @@ pkgGuesses = map (pack . unwords) . supLevelSets . map ident_string
 
 -- DottedName annot = [Ident annot]
 dottedToModuleName :: DottedName annot -> ModuleName
-dottedToModuleName = T.pack . intercalate "," . map ident_string
+dottedToModuleName = pack . intercalate "," . map ident_string
 
 runPythonImports :: (MonadMask m, MonadIO m)
                  => FilePath
