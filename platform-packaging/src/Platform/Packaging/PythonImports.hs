@@ -158,7 +158,7 @@ runPythonImports :: (Monad m, MonadMask m, MonadIO m)
                  -> m [PyPkg]
 runPythonImports fp = do
     importNames <- map dottedToModuleName . getImportNames <$> getAST fp
-    possibleMatches <- map findPossibleMatches importNames
+    possibleMatches <- mapM findPossibleMatches importNames
     --let matches' = zip importNames possibleMatches
     --let matchActions = map (uncurry findMatch) matches'
     return . map head $ possibleMatches

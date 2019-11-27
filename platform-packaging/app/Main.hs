@@ -38,4 +38,4 @@ main = catDocker =<< execParser opts
 catDocker :: InFile -> IO ()
 catDocker (InFile loc) = do
     modulesToInstall <- runPythonImports loc
-    return ()
+    putStrLn $ show modulesToInstall
