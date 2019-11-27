@@ -102,7 +102,7 @@ getImportNames (Module statements) = onlyJust . concatMap getImports' $ statemen
         getImports' f@Fun{}         = recurse . fun_body $ f
         getImports' a@AsyncFun{}    = recurse . return . fun_def $ a
         getImports' c@Class{}       = recurse . class_body $ c
-        getImports' c@Conditional{} = recurse . _ . ((map snd . cond_guards) <> (return . cond_else)) $ c
+        getImports' c@Conditional{} = recurse . mconcat . ((map snd . cond_guards) <> (return . cond_else)) $ c
         getImports' d@Decorated{}   = recurse . return . decorated_def $ d
         getImports' t@Try{}         = recurse . (try_body <> try_else <> try_finally) $ t
         getImports' w@With{}        = recurse . with_body $ w
@@ -140,5 +140,5 @@ runPythonImports fp
         body _ = do
             importNames <- getImportNames <$> getAST fp
             possibleMatchesByImport <- map findPossibleMatches importNames
-            let matchActions = findMatch $ curry possibleMatchesByImport
+            let matchActions = curry findMatch possibleMatchesByImport
             return []
