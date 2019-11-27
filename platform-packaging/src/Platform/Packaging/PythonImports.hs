@@ -45,6 +45,30 @@ instance ToJSON ModuleName where
 
 instance FromJSON ModuleName where
 
+data RegexFailure = RegexFailure
+    deriving (Show, Read, Eq, Ord, Bounded, Enum, Data, Typeable, Generic)
+
+instance Show RegexFailure where
+    show NoMatches = "There was a failure to match on a regex that was expected to have at least one match."
+
+instance Exception RegexFailure
+
+data ModuleInNoPackages = ModuleInNoPackages
+    deriving (Show, Read, Eq, Ord, Bounded, Enum, Data, Typeable, Generic)
+
+instance Show ModuleInNoPackages where
+    show ModuleInNoPackages = "No package was found exporting the appropriate module name."
+
+instance Exception ModuleInNoPackages
+
+data FileNotParseable = FileNotParseable
+    deriving (Show, Read, Eq, Ord, Bounded, Enum, Data, Typeable, Generic)
+
+instance Show FileNotParseable where
+    show FileNotParseable = "This file was not parsed as either Python 2 or Python 3."
+
+instance Exception FileNotParseable
+
 searchAndListNames :: (MonadMask m, MonadIO m)
                    => Text
                    -> m [Text]
@@ -61,14 +85,14 @@ getAST :: (MonadThrow m, MonadMask m, MonadIO m)
        -> m (Module annot)
 getAST fp = do
     let fileName = fp =~ "(?<=/)[^/]+$" -- capture from the final slash to EOL
-    when (fileName == "") $ mThrow EXCEPTION
+    when (fileName == "") $ mThrow NoMatches
     handle <- openFile fp ReadMode
     contents <- hGetContents handle
     let parsed = V3.parseModule contents fileName
     let finalParsed = if isRight parsed 
                          then parsed 
                          else V2.parseModule contents fileName
-    unless (isRight finalParsed) $ mThrow EXCEPTION
+    unless (isRight finalParsed) $ mThrow FileNotParseable
     return finalParsed
     where isRight (Right _) = True
           isRight _         = False 
@@ -86,7 +110,7 @@ findMatch :: (MonadMask m, MonadIO m, MonadThrow m)
           -> m PyPkg
 findMatch mn pkgs = do
     candidates <- filter (pkgHasModule mn) pkgs
-    when (null candidates) $ mThrow EXCEPTION
+    when (null candidates) $ mThrow ModuleInNoPackages
     return $ head candidates
 
 pkgHasModule :: PyPkg 
