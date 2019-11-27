@@ -31,11 +31,11 @@ infile = InFile
 main :: IO ()
 main = catDocker =<< execParser opts
     where opts = info (infile <**> helper)
-          ( fullDesc
-         <> progDesc "Print a Dockerfile that can run the input Python file."
-         <> header   "platform-packaging - currently a simplified test version." )
+                 (fullDesc 
+                 <> progDesc "Print a Dockerfile that can run the input Python file." 
+                 <> header   "platform-packaging - currently a simplified test version.")
 
 catDocker :: InFile -> IO ()
 catDocker (InFile loc) = do
     modulesToInstall <- runPythonImports loc
-    putStrLn $ show modulesToInstall
+    print modulesToInstall
