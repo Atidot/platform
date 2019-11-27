@@ -18,7 +18,7 @@ import "text" Data.Text (Text, pack)
 import "extra"      Data.Tuple.Extra ((&&&))
 import "exceptions" Control.Monad.Catch (MonadMask, MonadThrow, bracket)
 import "regex-tdfa" Text.Regex.TDFA
-import "regex-tdfa" Text.Regex.TDFA.Text ()
+import "regex-tdfa-text" Text.Regex.TDFA.Text ()
 import "language-python" Language.Python.Common.AST 
 import "language-python" Language.Python.Version2.Parser as V2
 import "language-python" Language.Python.Version3.Parser as V3
