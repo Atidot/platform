@@ -70,7 +70,6 @@ searchAndListNames pkg = do
 pypiPkg :: Text -> PyPkg
 pypiPkg = PyPkg "https://pypi.org/simple/"
 
--- TODO: write some kind of exception instance for Language.Python.Common.ParseError
 getAST :: (MonadThrow m, MonadMask m, MonadIO m) 
        => FilePath 
        -> m (Module annot)
@@ -86,7 +85,7 @@ getAST fp = do
     return' finalParsed
     where isRight (Right _) = True
           isRight _         = False 
-          return' (Right p) = return p
+          return' (Right p) = return $ fst p
           return' (Left _) = throwM FileNotParseable
 
 findPossibleMatches :: (MonadMask m, MonadIO m)
@@ -98,16 +97,17 @@ findPossibleMatches mn = do
 
 findMatch :: (MonadMask m, MonadIO m, MonadThrow m)
           => ModuleName 
-          -> [PyPkg] 
+          -> [PyPkg]
           -> m PyPkg
 findMatch mn pkgs = do
     candidates <- filterM (`pkgHasModule` mn) pkgs
     when (null candidates) $ throwM ModuleInNoPackages
     return $ head candidates
 
-pkgHasModule :: PyPkg 
+pkgHasModule :: (MonadMask m, MonadIO m)
+             => PyPkg 
              -> ModuleName
-             -> IO Bool
+             -> m Bool
 pkgHasModule = undefined
 
 getImportNames :: Module annot -> [DottedName annot]
@@ -166,7 +166,7 @@ runPythonImports fp
             possibleMatches <- map findPossibleMatches importNames
             --let matches' = zip importNames possibleMatches
             --let matchActions = map (uncurry findMatch) matches'
-            return []
+            return ()
 
             -- fp :: FilePath (getAST ->) m (Module annot) (getImportNames <$> ->)
             -- m [DottedName annot] -> m [ModuleName] (given to) importNames
