@@ -65,7 +65,7 @@ searchAndListNames :: (MonadMask m, MonadIO m)
                    -> m [Text]
 searchAndListNames pkg = do
     let firstWordRegex = "^[^ ]+(?= )"
-    t <- pack <$> liftIO . search def def $ pkg
+    t <- liftIO . search def def $ pkg
     return $ getAllTextMatches (t =~ firstWordRegex)
 
 pypiPkg :: Text -> PyPkg
@@ -76,7 +76,7 @@ getAST :: (MonadThrow m, MonadMask m, MonadIO m)
        -> m (Module SrcSpan)
 getAST fp = do
     let afterLastSlashRegex = "(?<=/)[^/]+$" -- capture from the final slash to EOL
-    let fileName = fp =~ afterSlashRegex
+    let fileName = fp =~ afterLastSlashRegex
     when (fileName == "") $ throwM NotAFilePath
     handle <- liftIO $ openFile fp ReadMode
     contents <- liftIO $ hGetContents handle

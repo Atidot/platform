@@ -13,7 +13,6 @@ import qualified "text"            Data.Text as T
 import           "base"            Data.Typeable (Typeable)
 import           "base"            GHC.Generics (Generic)
 import           "regex-tdfa"      Text.Regex.TDFA
-import           "regex-tdfa-text" Text.Regex.TDFA.Text ()
 import           "shellmet"        Shellmet (($|))
 import                             Platform.Packaging.Pip.Types
 
