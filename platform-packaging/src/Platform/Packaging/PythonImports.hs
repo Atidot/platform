@@ -5,7 +5,7 @@
 {-# LANGUAGE DeriveDataTypeable #-}
 module Platform.Packaging.PythonImports where
 
-import "base" Control.Monad.IO.Class (MonadIO)
+import "base" Control.Monad.IO.Class (MonadIO, liftIO)
 import "base" Control.Monad (when, unless)
 import "base" Data.Typeable (Typeable)
 import "base" Data.Data (Data)
@@ -75,7 +75,7 @@ getAST fp = do
 findPossibleMatches :: (MonadMask m, MonadIO m)
                     => ModuleName 
                     -> (ModuleName, m [PyPkg])
-findPossibleMatches = id &&& fmap (map pypiPkg) . searchAndListNames def def . _moduleName
+findPossibleMatches = id &&& (map pypiPkg <$> searchAndListNames def def . _moduleName)
 
 findMatch :: (MonadMask m, MonadIO m, MonadThrow m)
           => ModuleName 
@@ -102,7 +102,7 @@ getImportNames (Module statements) = onlyJust . concatMap getImports' $ statemen
         getImports' f@Fun{}         = recurse . fun_body $ f
         getImports' a@AsyncFun{}    = recurse . return . fun_def $ a
         getImports' c@Class{}       = recurse . class_body $ c
-        getImports' c@Conditional{} = recurse . ((map snd . cond_guards) <> cond_else) $ c
+        getImports' c@Conditional{} = recurse . _ . ((map snd . cond_guards) <> (return . cond_else)) $ c
         getImports' d@Decorated{}   = recurse . return . decorated_def $ d
         getImports' t@Try{}         = recurse . (try_body <> try_else <> try_finally) $ t
         getImports' w@With{}        = recurse . with_body $ w
@@ -140,5 +140,5 @@ runPythonImports fp
         body _ = do
             importNames <- getImportNames <$> getAST fp
             possibleMatchesByImport <- map findPossibleMatches importNames
-            let matchActions = map (findMatch . snd) possibleMatchesByImport
+            let matchActions = findMatch $ curry possibleMatchesByImport
             return []
