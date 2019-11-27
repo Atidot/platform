@@ -9,16 +9,17 @@ import           "base"                    System.IO (stdin)
 import           "base"                    Data.Typeable (Typeable)
 import           "base"                    Data.Data (Data)
 import           "base"                    GHC.Generics (Generic)
-import           "directory"               System.Directory (getCurrentDirectory)
 import qualified "bytestring"              Data.ByteString.Lazy.Char8 as B8 (putStrLn)
 import           "data-default"            Data.Default (Default, def)
-import           "optparse-applicative"    Options.Applicative
 import           "mtl"                     Control.Monad.State (execStateT, evalStateT)
+import           "optparse-applicative"    Options.Applicative
+import           "dockerfile"              Data.Docker
+import           "directory"               System.Directory (getCurrentDirectory)
 import           "platform-types"          Platform.Types
 import           "platform-dsl"            Platform.DSL
 import qualified "platform-dsl"            Platform.DSL as DSL (test)
 import           "platform-packaging"      Platform.Packaging
-import           "dockerfile"              Data.Docker
+import           "platform-packaging"      Platform.Packaging.PythonImports
 
 data InFile = InFile
     { location :: !FilePath }
