@@ -126,6 +126,10 @@ pkgGuesses = map (pack . unwords) . supLevelSets . map ident_string
     where supLevelSets (x:xs) = (x:xs) : supLevelSets xs
           supLevelSets [] = []
 
+-- DottedName annot = [Ident annot]
+dottedToModuleName :: DottedName annot -> ModuleName
+dottedToModuleName = T.pack . intercalate "," . map ident_string
+
 runPythonImports :: (MonadMask m, MonadIO m)
                  => FilePath
                  -> m [PyPkg]
@@ -138,7 +142,7 @@ runPythonImports fp
         fini _ = return ()
         
         body _ = do
-            importNames <- getImportNames <$> getAST fp
+            importNames <- map dottedToModuleNames . getImportNames <$> getAST fp
             possibleMatchesByImport <- map findPossibleMatches importNames
-            let matchActions = curry findMatch possibleMatchesByImport
+            let matchActions = uncurry findMatch possibleMatchesByImport
             return []
