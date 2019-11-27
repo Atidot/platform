@@ -72,12 +72,12 @@ pypiPkg = PyPkg "https://pypi.org/simple/"
 
 getAST :: (MonadThrow m, MonadMask m, MonadIO m) 
        => FilePath 
-       -> m (Module annot)
+       -> m (Module SrcSpan)
 getAST fp = do
     let fileName = fp =~ "(?<=/)[^/]+$" -- capture from the final slash to EOL
     when (fileName == "") $ throwM NotAFilePath
-    handle <- openFile fp ReadMode
-    contents <- hGetContents handle
+    handle <- liftIO $ openFile fp ReadMode
+    contents <- liftIO $ hGetContents handle
     let parsed = V3.parseModule contents fileName
     let finalParsed = if isRight parsed 
                          then parsed 
@@ -166,7 +166,7 @@ runPythonImports fp
             possibleMatches <- map findPossibleMatches importNames
             --let matches' = zip importNames possibleMatches
             --let matchActions = map (uncurry findMatch) matches'
-            return ()
+            return . map head $ possibleMatches
 
             -- fp :: FilePath (getAST ->) m (Module annot) (getImportNames <$> ->)
             -- m [DottedName annot] -> m [ModuleName] (given to) importNames
