@@ -12,12 +12,15 @@ import qualified "containers"   Data.Map as M
 import qualified "text"         Data.Text as T
 import qualified "terraform-hs" Language.Terraform.Util.Text as T
 
-simpleConfig :: TF AwsInstance
-simpleConfig = awsInstance' "example" "ami-2757f631" "t2.micro"
+simpleConfig :: TF ()
+simpleConfig = do
+  inst <- awsInstance' "atidot-instance" "ami-2757f631" "t2.micro"
+  awsVpc "atidot-vpc" "10.0.0.0/16" $ \vpcParams -> vpcParams{_vpc_enable_dns_support = True, _vpc_enable_dns_hostnames = True}
+  awsEip "atidot-ip" $ \eipParams -> eipParams{_eip_vpc = True, _eip_instance = Just $ (i_id inst)}
+  return ()
 
 mkDep :: IO ()
-mkDep = generateFiles "" $ do
+mkDep = generateFiles "" $
   withNameScope "example" $ do
     newAws (makeAwsParams "us-east-1"){aws_profile="default"}
     simpleConfig
-  return ()
