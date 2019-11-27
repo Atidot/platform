@@ -20,8 +20,9 @@ import "exceptions" Control.Monad.Catch (Exception, MonadMask, MonadThrow, throw
 import "regex-tdfa" Text.Regex.TDFA
 import "regex-tdfa-text" Text.Regex.TDFA.Text ()
 import "language-python" Language.Python.Common.AST 
-import "language-python" Language.Python.Version2.Parser as V2
-import "language-python" Language.Python.Version3.Parser as V3
+import "language-python" Language.Python.Common.SrcLocation (SrcSpan)
+import qualified "language-python" Language.Python.Version2.Parser as V2
+import qualified "language-python" Language.Python.Version3.Parser as V3
 import Platform.Packaging.Pip
 
 type URL = Text
