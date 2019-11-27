@@ -75,11 +75,10 @@ getAST fp = do
 
 findPossibleMatches :: (MonadMask m, MonadIO m)
                     => ModuleName 
-                    -> m (ModuleName, [PyPkg])
+                    -> m [PyPkg]
 findPossibleMatches mn = do
     pkgs <- searchAndListNames def def . _moduleName $ mn
-    let pkgs' = map pypiPkg pkgs
-    return (mn, pkgs')
+    return $ map pypiPkg pkgs
 
 findMatch :: (MonadMask m, MonadIO m, MonadThrow m)
           => ModuleName 
@@ -133,7 +132,7 @@ pkgGuesses = map (pack . unwords) . supLevelSets . map ident_string
 -- DottedName annot = [Ident annot]
 -- [Ident annot] -> [String] -> String -> Text
 dottedToModuleName :: DottedName annot -> ModuleName
-dottedToModuleName = ModuleName $ pack . intercalate "," . map ident_string
+dottedToModuleName dn = ModuleName $ pack . intercalate "," . map ident_string $ dn
 
 runPythonImports :: (MonadMask m, MonadIO m)
                  => FilePath
@@ -148,6 +147,7 @@ runPythonImports fp
         
         body _ = do
             importNames <- map dottedToModuleName . getImportNames <$> getAST fp
-            possibleMatchesByImport <- map findPossibleMatches importNames
-            matchActions <- uncurry findMatch possibleMatchesByImport
+            possibleMatches <- map findPossibleMatches importNames
+            let matches' = zip importNames possibleMatches
+            let matchActions = map (uncurry findMatch) matches'
             return []
