@@ -18,7 +18,6 @@ import "text" Data.Text (Text, pack)
 import "extra"      Data.Tuple.Extra ((&&&))
 import "exceptions" Control.Monad.Catch (Exception, MonadMask, MonadThrow, throwM, bracket)
 import "regex-tdfa" Text.Regex.TDFA
-import "regex-tdfa-text" Text.Regex.TDFA.Text ()
 import "language-python" Language.Python.Common.AST 
 import "language-python" Language.Python.Common.SrcLocation (SrcSpan)
 import qualified "language-python" Language.Python.Version2.Parser as V2
@@ -65,8 +64,9 @@ searchAndListNames :: (MonadMask m, MonadIO m)
                    => Text
                    -> m [Text]
 searchAndListNames pkg = do
-    t <- liftIO $ search def def pkg
-    return $ getAllTextMatches (t =~ ("^[^ ]+(?= )" :: Text))
+    let firstWordRegex = "^[^ ]+(?= )"
+    t <- pack <$> liftIO . search def def $ pkg
+    return $ getAllTextMatches (t =~ firstWordRegex)
 
 pypiPkg :: Text -> PyPkg
 pypiPkg = PyPkg "https://pypi.org/simple/"
@@ -75,7 +75,8 @@ getAST :: (MonadThrow m, MonadMask m, MonadIO m)
        => FilePath 
        -> m (Module SrcSpan)
 getAST fp = do
-    let fileName = fp =~ "(?<=/)[^/]+$" -- capture from the final slash to EOL
+    let afterLastSlashRegex = "(?<=/)[^/]+$" -- capture from the final slash to EOL
+    let fileName = fp =~ afterSlashRegex
     when (fileName == "") $ throwM NotAFilePath
     handle <- liftIO $ openFile fp ReadMode
     contents <- liftIO $ hGetContents handle
