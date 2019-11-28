@@ -9,6 +9,7 @@ import           "base"                    System.IO (stdin)
 import           "base"                    Data.Typeable (Typeable)
 import           "base"                    Data.Data (Data)
 import           "base"                    GHC.Generics (Generic)
+import           "base"                    System.IO
 import qualified "bytestring"              Data.ByteString.Lazy.Char8 as B8 (putStrLn)
 import           "data-default"            Data.Default (Default, def)
 import           "mtl"                     Control.Monad.State (execStateT, evalStateT)
@@ -41,5 +42,7 @@ main = catDocker =<< execParser opts
 
 catDocker :: InFile -> IO ()
 catDocker (InFile loc) = do
-    modulesToInstall <- runPythonImports loc
+    handle <- openFile loc ReadMode
+    contents <- hGetContents handle
+    modulesToInstall <- runPythonImports contents
     print modulesToInstall

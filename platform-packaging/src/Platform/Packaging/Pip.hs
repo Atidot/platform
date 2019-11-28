@@ -12,7 +12,7 @@ import           "text"            Data.Text (Text)
 import qualified "text"            Data.Text as T
 import           "base"            Data.Typeable (Typeable)
 import           "base"            GHC.Generics (Generic)
-import           "regex-tdfa"      Text.Regex.TDFA
+import           "regex-pcre"      Text.Regex.PCRE
 import           "shellmet"        Shellmet (($|))
 import                             Platform.Packaging.Pip.Types
 
@@ -94,5 +94,7 @@ debug :: GeneralOpts
       -> IO Text
 debug gOpts opts = pip $ "debug" : fmtOpts gOpts ++ fmtOpts opts
 
+-- TODO: fail gracefully when pip3 is not installed.
+-- and/or allow for the correct pip installation to be configurable.
 pip :: [Text] -> IO Text
-pip = ($|) "pip" 
+pip = ($|) "pip3" 

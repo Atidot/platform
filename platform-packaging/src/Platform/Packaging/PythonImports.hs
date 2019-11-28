@@ -10,14 +10,12 @@ import "base" Data.Typeable (Typeable)
 import "base" Data.Data (Data)
 import "base" Data.List (foldl', intercalate)
 import "base" GHC.Generics (Generic)
-import "base" System.IO
 import "aeson" Data.Aeson (FromJSON, ToJSON, toEncoding, genericToEncoding, defaultOptions)
 import "data-default" Data.Default (def)
-import "text" Data.Text (Text, pack)
+import "text" Data.Text (Text, pack, unpack)
 import "extra"      Data.Tuple.Extra ((&&&))
 import "exceptions" Control.Monad.Catch (Exception, MonadMask, MonadThrow, throwM, bracket)
-import "regex-tdfa" Text.Regex.TDFA
-import "regex-tdfa-text" Text.Regex.TDFA.Text ()
+import "regex-pcre" Text.Regex.PCRE
 import "language-python" Language.Python.Common.AST 
 import "language-python" Language.Python.Common.SrcLocation (SrcSpan)
 import qualified "language-python" Language.Python.Version2.Parser as V2
@@ -55,7 +53,7 @@ data PythonImportException
 instance Show PythonImportException where
     show RegexFailure = "There was a failure to match on a regex that was expected to have at least one match."
     show ModuleInNoPackages = "No package was found exporting the appropriate module name."
-    show FileNotParseable = "This file was not parsed as either Python 2 or Python 3."
+    show FileNotParseable = "This file could not be parsed as Python 3 code."
     show NotAFilePath = "A path to a file was expected, but this string is not one."
 
 instance Exception PythonImportException
@@ -64,31 +62,21 @@ searchAndListNames :: (MonadMask m, MonadIO m)
                    => Text
                    -> m [Text]
 searchAndListNames pkg = do
-    let firstWordRegex = "^[^ ]+(?= )" :: Text
+    let firstWordRegex = "^[^ ]+(?= )" :: String
     t <- liftIO . search def def $ pkg
-    let matches = getAllTextMatches (t =~ firstWordRegex) :: [Text]
-    return matches
+    let matches = getAllTextMatches (unpack t =~ firstWordRegex :: AllTextMatches [] String)
+    return $ map pack matches
 
 pypiPkg :: Text -> PyPkg
 pypiPkg = PyPkg "https://pypi.org/simple/"
 
-getAST :: (MonadThrow m, MonadMask m, MonadIO m) 
+getAST :: (MonadThrow m) 
        => String 
        -> m (Module SrcSpan)
 getAST fp = do
-    let afterLastSlashRegex = "(?<=/)[^/]+$" :: String-- capture from the final slash to EOL
-    let fileName = fp =~ afterLastSlashRegex :: String
-    when (fileName == "") $ throwM NotAFilePath
-    handle <- liftIO $ openFile fp ReadMode
-    contents <- liftIO $ hGetContents handle
-    let parsed = V3.parseModule contents fileName
-    let finalParsed = if isRight parsed 
-                         then parsed 
-                         else V2.parseModule contents fileName
+    let parsed = V3.parseModule contents "" -- We don't use last arg so leave it empty
     return' finalParsed
-    where isRight (Right _) = True
-          isRight _         = False 
-          return' (Right p) = return $ fst p
+    where return' (Right p) = return $ fst p
           return' (Left _) = throwM FileNotParseable
 
 findPossibleMatches :: (MonadMask m, MonadIO m)
@@ -107,11 +95,12 @@ findMatch mn pkgs = do
     when (null candidates) $ throwM ModuleInNoPackages
     return $ head candidates
 
+-- TODO: Write out the proper package-inspection logic to check this.
 pkgHasModule :: (MonadMask m, MonadIO m)
              => PyPkg 
              -> ModuleName
              -> m Bool
-pkgHasModule = undefined
+pkgHasModule _ _ = True
 
 getImportNames :: Module annot -> [DottedName annot]
 getImportNames (Module statements) = onlyJust . concatMap getImports' $ statements
@@ -154,15 +143,11 @@ dottedToModuleName :: DottedName annot -> ModuleName
 dottedToModuleName dn = ModuleName $ pack . intercalate "," . map ident_string $ dn
 
 runPythonImports :: (Monad m, MonadMask m, MonadIO m)
-                 => FilePath
+                 => String
                  -> m [PyPkg]
-runPythonImports fp = do
-    importNames <- map dottedToModuleName . getImportNames <$> getAST fp
+runPythonImports fileContents = do
+    importNames <- map dottedToModuleName . getImportNames <$> getAST fileContents
     possibleMatches <- mapM findPossibleMatches importNames
     --let matches' = zip importNames possibleMatches
     --let matchActions = map (uncurry findMatch) matches'
-    return . map head $ possibleMatches
-
-    -- fp :: FilePath (getAST ->) m (Module annot) (getImportNames <$> ->)
-    -- m [DottedName annot] -> m [ModuleName] (given to) importNames
-    -- [ModuleName] -> [m [PyPkg]]
+    return . map findMatch $ possibleMatches
