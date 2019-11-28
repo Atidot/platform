@@ -18,8 +18,7 @@ import "exceptions" Control.Monad.Catch (Exception, MonadMask, MonadThrow, throw
 import "regex-pcre" Text.Regex.PCRE
 import "language-python" Language.Python.Common.AST 
 import "language-python" Language.Python.Common.SrcLocation (SrcSpan)
-import qualified "language-python" Language.Python.Version2.Parser as V2
-import qualified "language-python" Language.Python.Version3.Parser as V3
+import qualified "language-python" Language.Python.Version3.Parser (parseModule)
 import Platform.Packaging.Pip
 
 type URL = Text
@@ -73,9 +72,9 @@ pypiPkg = PyPkg "https://pypi.org/simple/"
 getAST :: (MonadThrow m) 
        => String 
        -> m (Module SrcSpan)
-getAST fp = do
-    let parsed = V3.parseModule contents "" -- We don't use last arg so leave it empty
-    return' finalParsed
+getAST contents = do
+    let parsed = parseModule contents "" -- We don't use last arg so leave it empty
+    return' parsed
     where return' (Right p) = return $ fst p
           return' (Left _) = throwM FileNotParseable
 
@@ -100,7 +99,7 @@ pkgHasModule :: (MonadMask m, MonadIO m)
              => PyPkg 
              -> ModuleName
              -> m Bool
-pkgHasModule _ _ = True
+pkgHasModule _ _ = return True
 
 getImportNames :: Module annot -> [DottedName annot]
 getImportNames (Module statements) = onlyJust . concatMap getImports' $ statements
@@ -150,4 +149,4 @@ runPythonImports fileContents = do
     possibleMatches <- mapM findPossibleMatches importNames
     --let matches' = zip importNames possibleMatches
     --let matchActions = map (uncurry findMatch) matches'
-    return . map findMatch $ possibleMatches
+    return $ map head possibleMatches
