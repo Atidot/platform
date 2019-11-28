@@ -18,7 +18,7 @@ import "exceptions" Control.Monad.Catch (Exception, MonadMask, MonadThrow, throw
 import "regex-pcre" Text.Regex.PCRE
 import "language-python" Language.Python.Common.AST 
 import "language-python" Language.Python.Common.SrcLocation (SrcSpan)
-import qualified "language-python" Language.Python.Version3.Parser (parseModule)
+import "language-python" Language.Python.Version3.Parser (parseModule)
 import Platform.Packaging.Pip
 
 type URL = Text
