@@ -89,7 +89,7 @@ findPossibleMatches mn = do
 findMatch :: (MonadMask m, MonadIO m)
           => ModuleName 
           -> [PyPkg]
-          -> m (ModuleName, Maybe PyPkg)
+          -> m (Maybe PyPkg)
 findMatch mn pkgs = do
     candidates <- filterM (`pkgHasModule` mn) pkgs
     if null candidates
@@ -167,6 +167,6 @@ runPythonImports fileContents = do
         -- pairs into the second tuple entry.
         sortPairs :: [(ModuleName, Maybe PyPkg)] -> ([(ModuleName, PyPkg)], [ModuleName])
         sortPairs pairs = (\(_, ys, zs) -> (ys, zs)) $ sortPairs' (pairs, [], [])
-        sortPairs' ((m, Nothing) : xs, ys, zs) = sortPairs (xs, ys, m : zs)
-        sortPairs' ((m, Just x) : xs, ys, zs) = sortPairs (xs, (m, x) : ys, zs)
+        sortPairs' ((m, Nothing) : xs, ys, zs) = sortPairs' (xs, ys, m : zs)
+        sortPairs' ((m, Just x) : xs, ys, zs) = sortPairs' (xs, (m, x) : ys, zs)
         sortPairs' ([], ys, zs) = ([], ys, zs)
