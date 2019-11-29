@@ -86,10 +86,10 @@ findPossibleMatches mn = do
     pkgs <- searchAndListNames $ _moduleName mn
     return $ map pypiPkg pkgs
 
-findMatch :: (MonadIO m)
+findMatch :: (MonadMask m, MonadIO m)
           => ModuleName 
           -> [PyPkg]
-          -> m (Maybe PyPkg)
+          -> m (ModuleName, Maybe PyPkg)
 findMatch mn pkgs = do
     candidates <- filterM (`pkgHasModule` mn) pkgs
     if null candidates
@@ -97,7 +97,7 @@ findMatch mn pkgs = do
        else return $ Just (head candidates)
 
 -- TODO: Write out the proper package-inspection logic to check this.
-pkgHasModule :: (MonadMask m, Monad m)
+pkgHasModule :: (MonadMask m, MonadIO m)
              => PyPkg 
              -> ModuleName
              -> m Bool
@@ -160,12 +160,13 @@ runPythonImports fileContents = do
     importNames <- map dottedToModuleName . getImportNames <$> getAST fileContents
     possibleMatches <- mapM findPossibleMatches importNames
     let matches' = zip importNames possibleMatches
-    matchedPairs <- mapM (uncurry findMatch) matches'
+    matchedPairs <- mapM (\pair@(m, _) -> (m, uncurry findMatch pair)) matches'
     return $ sortPairs matchedPairs
     where
         -- This sorts matched pairs into the first tuple entry and unmatched
         -- pairs into the second tuple entry.
-        sortPairs pairs = (\(_, ys, zs) -> (ys, zs)) $ sortPairs (pairs, [], [])
+        sortPairs :: [(ModuleName, Maybe PyPkg)] -> ([(ModuleName, PyPkg)], [ModuleName])
+        sortPairs pairs = (\(_, ys, zs) -> (ys, zs)) $ sortPairs' (pairs, [], [])
         sortPairs' ((m, Nothing) : xs, ys, zs) = sortPairs (xs, ys, m : zs)
         sortPairs' ((m, Just x) : xs, ys, zs) = sortPairs (xs, (m, x) : ys, zs)
         sortPairs' ([], ys, zs) = ([], ys, zs)
