@@ -159,9 +159,8 @@ runPythonImports :: (MonadThrow m, MonadIO m)
 runPythonImports fileContents = do
     importNames <- map dottedToModuleName . getImportNames <$> getAST fileContents
     possibleMatches <- mapM findPossibleMatches importNames
-    let matches' = zip importNames possibleMatches
-    matchedPairs <- mapM (\pair@(m, _) -> (m, uncurry findMatch pair)) matches'
-    return $ sortPairs matchedPairs
+    matches <- zipWithM findMatch importNames possibleMatches
+    return $ sortPairs (zip importNames matches)
     where
         -- This sorts matched pairs into the first tuple entry and unmatched
         -- pairs into the second tuple entry.
