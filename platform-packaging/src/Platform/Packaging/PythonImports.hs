@@ -2,7 +2,12 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PackageImports #-}
 {-# LANGUAGE DeriveDataTypeable #-}
-module Platform.Packaging.PythonImports where
+module Platform.Packaging.PythonImports 
+    ( ModuleName
+    , PyPkg
+    , runPythonImports
+    , PythonImportException
+    ) where
 
 import "base" Control.Monad.IO.Class (MonadIO, liftIO)
 import "base" Control.Monad (when, unless, filterM)
@@ -14,7 +19,7 @@ import "aeson" Data.Aeson (FromJSON, ToJSON, toEncoding, genericToEncoding, defa
 import "data-default" Data.Default (def)
 import "text" Data.Text (Text, pack, unpack)
 import "extra"      Data.Tuple.Extra ((&&&))
-import "exceptions" Control.Monad.Catch (Exception, MonadMask, MonadThrow, throwM, bracket)
+import "exceptions" Control.Monad.Catch (Exception, MonadMask, MonadCatch, MonadThrow, throwM, bracket)
 import "regex-pcre" Text.Regex.PCRE
 import "language-python" Language.Python.Common.AST 
 import "language-python" Language.Python.Common.SrcLocation (SrcSpan)
@@ -43,21 +48,17 @@ instance ToJSON ModuleName where
 instance FromJSON ModuleName where
 
 data PythonImportException 
-    = RegexFailure
-    | ModuleInNoPackages
+    = ModuleInNoPackages
     | FileNotParseable
-    | NotAFilePath
     deriving (Read, Eq, Ord, Bounded, Enum, Data, Typeable, Generic)
 
 instance Show PythonImportException where
-    show RegexFailure = "There was a failure to match on a regex that was expected to have at least one match."
     show ModuleInNoPackages = "No package was found exporting the appropriate module name."
     show FileNotParseable = "This file could not be parsed as Python 3 code."
-    show NotAFilePath = "A path to a file was expected, but this string is not one."
 
 instance Exception PythonImportException
 
-searchAndListNames :: (MonadMask m, MonadIO m)
+searchAndListNames :: (MonadThrow m, MonadIO m)
                    => Text
                    -> m [Text]
 searchAndListNames pkg = do
@@ -69,7 +70,7 @@ searchAndListNames pkg = do
 pypiPkg :: Text -> PyPkg
 pypiPkg = PyPkg "https://pypi.org/simple/"
 
-getAST :: (MonadThrow m) 
+getAST :: (MonadThrow m, MonadIO m) 
        => String 
        -> m (Module SrcSpan)
 getAST contents = do
@@ -78,28 +79,36 @@ getAST contents = do
     where return' (Right p) = return $ fst p
           return' (Left _) = throwM FileNotParseable
 
-findPossibleMatches :: (MonadMask m, MonadIO m)
+findPossibleMatches :: (MonadCatch m, MonadIO m)
                     => ModuleName 
                     -> m [PyPkg]
 findPossibleMatches mn = do
     pkgs <- searchAndListNames $ _moduleName mn
     return $ map pypiPkg pkgs
 
-findMatch :: (MonadMask m, MonadIO m, MonadThrow m)
+findMatch :: (MonadIO m)
           => ModuleName 
           -> [PyPkg]
-          -> m PyPkg
+          -> m (Maybe PyPkg)
 findMatch mn pkgs = do
     candidates <- filterM (`pkgHasModule` mn) pkgs
-    when (null candidates) $ throwM ModuleInNoPackages
-    return $ head candidates
+    if null candidates
+       then return Nothing
+       else return $ Just (head candidates)
 
 -- TODO: Write out the proper package-inspection logic to check this.
-pkgHasModule :: (MonadMask m, MonadIO m)
+pkgHasModule :: (MonadMask m, Monad m)
              => PyPkg 
              -> ModuleName
              -> m Bool
-pkgHasModule _ _ = return True
+pkgHasModule _ _ = 
+    bracket init'
+            fini
+            body
+    where
+        init'  = return ()
+        fini _ = return ()
+        body _ = return True
 
 getImportNames :: Module annot -> [DottedName annot]
 getImportNames (Module statements) = onlyJust . concatMap getImports' $ statements
@@ -141,12 +150,22 @@ pkgGuesses = map (pack . unwords) . supLevelSets . map ident_string
 dottedToModuleName :: DottedName annot -> ModuleName
 dottedToModuleName dn = ModuleName $ pack . intercalate "," . map ident_string $ dn
 
-runPythonImports :: (Monad m, MonadMask m, MonadIO m)
+-- The output tuple of runPythonImports works as follows:
+-- The first list is module names paired with their package names.
+-- The second list is module names that could not be paired.
+runPythonImports :: (MonadThrow m, MonadIO m)
                  => String
-                 -> m [PyPkg]
+                 -> m ([(ModuleName, PyPkg)], [ModuleName])
 runPythonImports fileContents = do
     importNames <- map dottedToModuleName . getImportNames <$> getAST fileContents
     possibleMatches <- mapM findPossibleMatches importNames
-    --let matches' = zip importNames possibleMatches
-    --let matchActions = map (uncurry findMatch) matches'
-    return $ map head possibleMatches
+    let matches' = zip importNames possibleMatches
+    matchedPairs <- mapM (uncurry findMatch) matches'
+    return $ sortPairs matchedPairs
+    where
+        -- This sorts matched pairs into the first tuple entry and unmatched
+        -- pairs into the second tuple entry.
+        sortPairs pairs = (\(_, ys, zs) -> (ys, zs)) $ sortPairs (pairs, [], [])
+        sortPairs' ((m, Nothing) : xs, ys, zs) = sortPairs (xs, ys, m : zs)
+        sortPairs' ((m, Just x) : xs, ys, zs) = sortPairs (xs, (m, x) : ys, zs)
+        sortPairs' ([], ys, zs) = ([], ys, zs)
