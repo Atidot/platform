@@ -10,7 +10,7 @@ module Platform.Packaging.PythonImports
     ) where
 
 import "base" Control.Monad.IO.Class (MonadIO, liftIO)
-import "base" Control.Monad (when, unless, filterM)
+import "base" Control.Monad (when, unless, filterM, zipWithM)
 import "base" Data.Typeable (Typeable)
 import "base" Data.Data (Data)
 import "base" Data.List (foldl', intercalate)
@@ -58,12 +58,12 @@ instance Show PythonImportException where
 
 instance Exception PythonImportException
 
-searchAndListNames :: (MonadThrow m, MonadIO m)
+searchAndListNames :: (MonadCatch m, MonadIO m)
                    => Text
                    -> m [Text]
 searchAndListNames pkg = do
     let firstWordRegex = "^[^ ]+(?= )" :: String
-    t <- liftIO . search def def $ pkg
+    t <- catch (liftIO . search def def $ pkg) (const $ return "")
     let matches = getAllTextMatches (unpack t =~ firstWordRegex :: AllTextMatches [] String)
     return $ map pack matches
 
@@ -153,7 +153,7 @@ dottedToModuleName dn = ModuleName $ pack . intercalate "," . map ident_string $
 -- The output tuple of runPythonImports works as follows:
 -- The first list is module names paired with their package names.
 -- The second list is module names that could not be paired.
-runPythonImports :: (MonadThrow m, MonadIO m)
+runPythonImports :: (MonadMask m, MonadIO m)
                  => String
                  -> m ([(ModuleName, PyPkg)], [ModuleName])
 runPythonImports fileContents = do
