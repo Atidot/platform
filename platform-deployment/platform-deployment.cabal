@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 9166a2b9f8835f6dcea39c1f249d8b2f4618c251de811c0cff07c0a218a390e1
+-- hash: 0ee93d76899dbd458ab8288380a4fb1e0394baaffd32b1532461148b7e60f80b
 
 name:           platform-deployment
 version:        0.1.0.0
@@ -37,6 +37,7 @@ library
   build-depends:
       base >=4.7 && <5
     , free
+    , mtl
   default-language: Haskell2010
 
 executable platform-deployment-exe
@@ -50,6 +51,7 @@ executable platform-deployment-exe
   build-depends:
       base >=4.7 && <5
     , free
+    , mtl
     , platform-deployment
   default-language: Haskell2010
 
@@ -65,5 +67,6 @@ test-suite platform-deployment-test
   build-depends:
       base >=4.7 && <5
     , free
+    , mtl
     , platform-deployment
   default-language: Haskell2010

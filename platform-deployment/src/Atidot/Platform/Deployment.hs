@@ -16,22 +16,28 @@ import "free"                   Control.Monad.Free.TH
 
 someFunc = putStrLn "hello"
 
-data Docker = DockerC FilePath
 data Volume = Volume FilePath
 data Disk = Disk FilePath
 
 data Deployment a
-    = Docker Docker (Bool -> a) -- bool
+    = Container String (Bool -> a) -- bool
     | Secret FilePath (FilePath -> a)
-    | Config FilePath (FilePath -> a)
+  --  | Config FilePath (FilePath -> a)
     | Mount Disk Volume (Bool -> a)
     | Start           ([String] -> a)
     deriving (Typeable, Functor)
 
 type DeploymentM = Free Deployment
-data TestConfig = TestConfig
 
 makeFree ''Deployment
+
+kiss :: DeploymentM Bool
+kiss = do
+    dbUrl  <- secret "DB_URL"
+    volume1 <- mount (Disk "bli/bloo") (Volume "bli/bloo")
+    b <- container "hello-world"
+    return b
+
 
 pacificLife :: DeploymentM Bool
 pacificLife = do
@@ -39,13 +45,13 @@ pacificLife = do
     dbPass <- secret "DB_PASSWORD"
     volume1 <- mount (Disk "bli/bloo") (Volume "bli/bloo")
     volume2 <- mount (Disk "bli/bliiii/oooo") (Volume "bli/bli")
-    b <- docker $ DockerC "atidot/undins"
+    b <- container "atidot/undins"
     return b
 
 
 
 
-    -- Good for AMI, ECS, Kubernetes, Test, everything
+-- Good for AMI, ECS, Kubernetes, Test, everything
 -- newtype Deployment = Deployment
 -- newtype ResourceName = ResourceName
 -- newtype Secret = Secret

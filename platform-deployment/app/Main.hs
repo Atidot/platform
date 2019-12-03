@@ -4,4 +4,4 @@ import Atidot.Platform.Deployment
 import Atidot.Platform.Test
 
 main :: IO ()
-main = runTest undefined undefined
+main = runTest TestConfig kiss
