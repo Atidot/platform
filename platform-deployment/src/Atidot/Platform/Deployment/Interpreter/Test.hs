@@ -1,4 +1,4 @@
-module Atidot.Platform.Test where
+module Atidot.Platform.Deployment.Interpreter.Test where
 
 -- import Control.Monad.State
 import "free"     Control.Monad.Free
