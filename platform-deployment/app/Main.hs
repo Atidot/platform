@@ -1,7 +1,7 @@
 module Main where
 
 import Atidot.Platform.Deployment
-import Atidot.Platform.Deployment.Interpreter.Test
+import Atidot.Platform.Deployment.Interpreter.AMI
 
 main :: IO ()
-main = runTest TestConfig kiss
+main = runAMI AMIConfig kiss

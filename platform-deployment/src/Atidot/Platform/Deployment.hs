@@ -19,10 +19,14 @@ someFunc = putStrLn "hello"
 data Volume = Volume FilePath
 data Disk = Disk FilePath
 
+type Name = String
+type SecretValue = String
+
 data Deployment a
     = Container String (Bool -> a) -- bool
-    | Secret FilePath (FilePath -> a)
-  --  | Config FilePath (FilePath -> a)
+    | Secret Name (SecretValue -> a)
+  -- | Config FilePath (FilePath -> a)
+  -- | AttachSecret SecretValue Container (Bool -> a)
     | Mount Disk Volume (Bool -> a)
     | Start           ([String] -> a)
     deriving (Typeable, Functor)
@@ -46,6 +50,7 @@ pacificLife = do
     volume1 <- mount (Disk "bli/bloo") (Volume "bli/bloo")
     volume2 <- mount (Disk "bli/bliiii/oooo") (Volume "bli/bli")
     b <- container "atidot/undins"
+    b <- container "atidot/undins2"
     return b
 
 
