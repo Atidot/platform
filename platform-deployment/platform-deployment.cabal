@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 905c24d0216fa6246e788fd055bb0b505e1ea2469decb3a6a33e53ad350f349a
+-- hash: 554754eb0e56acba0cc0172320de27b8412948bc57c052be69f7d7737f968198
 
 name:           platform-deployment
 version:        0.1.0.0
@@ -29,6 +29,10 @@ library
   exposed-modules:
       Atidot.Platform.Deployment
       Atidot.Platform.Deployment.Interpreter.AMI
+      Atidot.Platform.Deployment.Interpreter.AMI.Template
+      Atidot.Platform.Deployment.Interpreter.AMI.Types
+      Atidot.Platform.Deployment.Interpreter.AMI.Types.Default
+      Atidot.Platform.Deployment.Interpreter.AMI.Types.Types
       Atidot.Platform.Deployment.Interpreter.Test
   other-modules:
       Paths_platform_deployment
@@ -36,7 +40,9 @@ library
       src
   default-extensions: PackageImports OverloadedStrings
   build-depends:
-      base >=4.7 && <5
+      aeson
+    , base >=4.7 && <5
+    , data-default
     , exceptions
     , free
     , ginger
@@ -54,7 +60,9 @@ executable platform-deployment-exe
   default-extensions: PackageImports OverloadedStrings
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-depends:
-      base >=4.7 && <5
+      aeson
+    , base >=4.7 && <5
+    , data-default
     , exceptions
     , free
     , ginger
@@ -74,7 +82,9 @@ test-suite platform-deployment-test
   default-extensions: PackageImports OverloadedStrings
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-depends:
-      base >=4.7 && <5
+      aeson
+    , base >=4.7 && <5
+    , data-default
     , exceptions
     , free
     , ginger
