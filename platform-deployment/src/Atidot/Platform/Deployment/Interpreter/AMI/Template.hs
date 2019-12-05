@@ -6,6 +6,7 @@ import "ginger"         Text.Ginger
 import "raw-strings-qq" Text.RawString.QQ
 import "mtl"            Control.Monad.Writer (Writer)
 import "mtl"            Control.Monad.Identity (Identity(..))
+import Atidot.Platform.Deployment.Interpreter.AMI.Types
 
 nullResolver :: IncludeResolver Identity
 nullResolver = const $ return Nothing
@@ -14,40 +15,40 @@ toTemplate :: String -> Template SourcePos
 toTemplate template = either (error . show) id . runIdentity $
     parseGinger nullResolver Nothing template
 
--- renderProvider :: AMIConfig -> Text -> Text
-renderProvider :: Text
-renderProvider = do
+renderProvider :: AMIConfig -> String -> Text
+renderProvider amiConfig template = do
     let ctx :: GVal (Run SourcePos (Writer Text) Text)
-        ctx = dict
-            [ (("region" :: Text) ~> ("bobo" :: Text))
-            , (("profile" :: Text) ~> (5 :: Int))
-            , (("vpc-name" :: Text) ~> (undefined :: Text))
-            , (("gateway-name" :: Text) ~> (undefined :: Text))
-            , (("subnet-name" :: Text) ~> (undefined :: Text))
-            , (("route-table-name" :: Text) ~> (undefined :: Text))
-            , (("route-table-assoc-name" :: Text) ~> (undefined :: Text))
-            , (("security-group-name" :: Text) ~> (undefined :: Text))
-            , (("instance-name" :: Text) ~> (undefined :: Text))
-            , (("eip-name" :: Text) ~> (undefined :: Text))
-            , (("key-name" :: Text) ~> (undefined :: Text))
-            , (("key-public" :: Text) ~> (undefined :: Text))
-            ]
-    easyRender ctx $ toTemplate provider -- template
-        -- where
-        --     toCtx conf = dict . map (\(a,b) -> (a,b conf))
-        --         [ ("region" , _AMIConfig_region)
-        --         , ("profile", _AMIConfig_profile)
-        --         , ("vpc-name", _AMIConfig_vpcName)
-        --         , ("gateway-name", _AMIConfig_gatewayName)
-        --         , ("subnet-name", _AMIConfig_subnetName)
-        --         , ("route-table-name", _AMIConfig_routeTableName)
-        --         , ("route-table-assoc-name", _AMIConfig_routeTableAssocName)
-        --         , ("security-group-name", _AMIConfig_securityGroupName)
-        --         , ("instance-name", _AMIConfig_instanceName)
-        --         , ("eip-name", _AMIConfig_eipName)
-        --         , ("key-name", _AMIConfig_keyName)
-        --         , ("key-public", _AMIConfig_keyPublic)
-        --         ]
+        ctx = toCtx amiConfig
+    easyRender ctx $ toTemplate template
+        where
+            toCtx :: AMIConfig -> GVal (Run SourcePos (Writer Text) Text)
+            toCtx conf = dict $ map (\(a,b) -> a ~> b conf)
+                [ ("region" , _AMIConfig_region)
+                , ("profile", _AMIConfig_profile)
+                , ("vpc-name", _AMIConfig_vpcName)
+                , ("gateway-name", _AMIConfig_gatewayName)
+                , ("subnet-name", _AMIConfig_subnetName)
+                , ("route-table-name", _AMIConfig_routeTableName)
+                , ("route-table-assoc-name", _AMIConfig_routeTableAssocName)
+                , ("security-group-name", _AMIConfig_securityGroupName)
+                , ("instance-name", _AMIConfig_instanceName)
+                , ("eip-name", _AMIConfig_eipName)
+                , ("key-name", _AMIConfig_keyName)
+                , ("key-public", _AMIConfig_keyPublic)
+                ]
+
+allTemplates :: String
+allTemplates = foldl1 (<>)
+    [ provider
+    , awsVpc
+    , awsInternetGateway
+    , awsSubnet
+    , awsRouteTable
+    , awsRouteTableAssoc
+    , awsSecurityGroup
+    , awsInstance
+    , awsKeyPair
+    ]
 
 provider :: String
 provider = [r|
