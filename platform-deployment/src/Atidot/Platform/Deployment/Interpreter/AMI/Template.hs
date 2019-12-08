@@ -47,6 +47,7 @@ allTemplates = foldl1 (<>)
     , awsRouteTableAssoc
     , awsSecurityGroup
     , awsInstance
+    , awsEip
     , awsKeyPair
     ]
 
