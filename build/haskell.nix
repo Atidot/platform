@@ -29,19 +29,21 @@ rec {
   platformPackagingSrc = ../platform-packaging;
   platformVisualSrc    = ../platform-visual;
   platformTerraformSrc = ../platform-terraform;
+  platformDeploymentSrc = ../platform-deployment;
 
   projectPackages = hspkgs: {
-    executor           = ease hspkgs.executor;
-    stratosphere       = hspkgs.callCabal2nix "stratosphere"       "${stratosphereSrc}" {};
-    terraform-hs       = hspkgs.callCabal2nix "terraform-hs"       "${terraformHsSrc}"  {};
-    platform-types     = hspkgs.callCabal2nix "platform-types"     "${platformTypesSrc}" {};
-    platform-dsl       = hspkgs.callCabal2nix "platform-dsl"       "${platformDSLSrc}" {};
-    platform-aws       = hspkgs.callCabal2nix "platform-aws"       "${platformAWSSrc}" {};
-    platform-kube      = hspkgs.callCabal2nix "platform-kube"      "${platformKubeSrc}" {};
-    platform-packaging = hspkgs.callCabal2nix "platform-packaging" "${platformPackagingSrc}" {};
-    platform-process   = hspkgs.callCabal2nix "platform-process"   "${platformProcessSrc}" {};
-    platform-visual    = hspkgs.callCabal2nix "platform-visual"    "${platformVisualSrc}" {};
-    platform-terraform = hspkgs.callCabal2nix "platform-terraform" "${platformTerraformSrc}" {};
+    executor            = ease hspkgs.executor;
+    stratosphere        = hspkgs.callCabal2nix "stratosphere"       "${stratosphereSrc}" {};
+    terraform-hs        = hspkgs.callCabal2nix "terraform-hs"       "${terraformHsSrc}"  {};
+    platform-types      = hspkgs.callCabal2nix "platform-types"     "${platformTypesSrc}" {};
+    platform-dsl        = hspkgs.callCabal2nix "platform-dsl"       "${platformDSLSrc}" {};
+    platform-aws        = hspkgs.callCabal2nix "platform-aws"       "${platformAWSSrc}" {};
+    platform-kube       = hspkgs.callCabal2nix "platform-kube"      "${platformKubeSrc}" {};
+    platform-packaging  = hspkgs.callCabal2nix "platform-packaging" "${platformPackagingSrc}" {};
+    platform-process    = hspkgs.callCabal2nix "platform-process"   "${platformProcessSrc}" {};
+    platform-visual     = hspkgs.callCabal2nix "platform-visual"    "${platformVisualSrc}" {};
+    platform-terraform  = hspkgs.callCabal2nix "platform-terraform" "${platformTerraformSrc}" {};
+    platform-deployment = hspkgs.callCabal2nix "platform-deployment" "${platformDeploymentSrc}" {};
   };
 
   packages = haskellPackages.override (old: {
