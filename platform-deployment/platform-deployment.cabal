@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 9d497c717aaf3c2a1868425935d1e453ed8f1263d07dc4ebc5f8c7377d38bbf7
+-- hash: a25114147abb23dba685851813487f929e1e4c348f0e0460fb4504c96f2ad9d0
 
 name:           platform-deployment
 version:        0.1.0.0
@@ -48,7 +48,6 @@ library
     , ginger
     , mtl
     , raw-strings-qq
-    , simplessh
     , text
     , turtle
   default-language: Haskell2010
@@ -71,7 +70,6 @@ executable platform-deployment-exe
     , mtl
     , platform-deployment
     , raw-strings-qq
-    , simplessh
     , text
     , turtle
   default-language: Haskell2010
@@ -95,7 +93,6 @@ test-suite platform-deployment-test
     , mtl
     , platform-deployment
     , raw-strings-qq
-    , simplessh
     , text
     , turtle
   default-language: Haskell2010

@@ -9,7 +9,6 @@ import           "free"       Control.Monad.Free
 import           "mtl"        Control.Monad.State
 import           "exceptions" Control.Monad.Catch (MonadMask, bracket)
 import           "turtle"     Turtle
-import           "simplessh"  Network.SSH.Client.SimpleSSH
 
 import                        Atidot.Platform.Deployment
 import                        Atidot.Platform.Deployment.Interpreter.AMI.Template
@@ -55,19 +54,6 @@ runAMI config dep =
             putStrLn "------------------------------------------"
             putStrLn hostname
             sshW publicDns ["touch","hello"]
-            --session <- liftIO $ runSimpleSSH $ do
-                --session <- openSession hostname port knownHostFp
-                --session' <- authenticateWithKey session "ubuntu" pubkey privkey ""
-                --output "~/hello" "hello"
-                --execCommand session' "touch ~/hello"
-                -- withSessionKey hostname port knownHostFp "ubuntu" pubkey privkey "" $ \sess -> execCommand sess "touch ~/hello"
-                --return session
-            --    return ()
-            --auth_session <- authenticateWithPasswordSource session username password
-            -- session'' <- case runErrorT session' of
-                -- Left simple_ssh_error -> error "break stuff" {- SimpleSSHError -}
-                -- Right sess -> return session
-
             _ <-  (runStateT (iterM (run publicDns) dep) config)
             return ()
 
@@ -86,4 +72,4 @@ runAMI config dep =
             next True
 
 
-sshW pdns cmd = procs "ssh" (["ubuntu@"<>pdns,"-o","StrictHostKeyChecking=no","-i","~/.ssh/terraform-keys2"] ++ cmd) stdin
+sshW pdns cmd = procs "ssh" (["ubuntu@"<>pdns,"-o","StrictHostKeyChecking=no  ","-i","~/.ssh/terraform-keys2"] ++ cmd) stdin
