@@ -37,6 +37,7 @@ library
                      , shellmet
                      , dockerfile
                      , mtl
+                     , temporary
                      , exceptions
                      , platform-types
                      , platform-dsl
@@ -61,11 +62,13 @@ executable platform-packaging
   -- other-extensions:
   build-depends:       base
                      , bytestring
+                     , containers
                      , data-default
                      , directory
                      , dockerfile
                      , aeson
                      , optparse-applicative
+                     , text
                      , mtl
                      , platform-types
                      , platform-dsl

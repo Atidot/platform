@@ -3,7 +3,6 @@
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE OverloadedStrings #-}
 module Main where
-
 import           "base"                    Data.Semigroup ((<>))
 import           "base"                    System.IO (stdin)
 import           "base"                    Data.Typeable (Typeable)
@@ -12,9 +11,11 @@ import           "base"                    GHC.Generics (Generic)
 import           "base"                    System.IO
 import qualified "bytestring"              Data.ByteString.Lazy.Char8 as B8 (putStrLn)
 import           "data-default"            Data.Default (Default, def)
-import           "mtl"                     Control.Monad.State (execStateT, evalStateT)
-import           "optparse-applicative"    Options.Applicative
 import           "dockerfile"              Data.Docker
+import           "containers"              Data.Map.Strict (empty)
+import           "text"                    Data.Text (unpack)
+import           "mtl"                     Control.Monad.State (execStateT, evalStateT)
+import           "optparse-applicative"    Options.Applicative (Parser, strOption, long, metavar, help, header, fullDesc, helper, progDesc, info, execParser, (<**>))
 import           "directory"               System.Directory (getCurrentDirectory)
 import           "platform-types"          Platform.Types
 import           "platform-dsl"            Platform.DSL
@@ -44,5 +45,14 @@ catDocker :: InFile -> IO ()
 catDocker (InFile loc) = do
     handle <- openFile loc ReadMode
     contents <- hGetContents handle
-    modulesToInstall <- runPythonImports contents
-    print modulesToInstall
+    pipModulesForInstall <- fmap (map (unpack . _pyPkg_name . snd) . fst) $ runPythonImports contents
+    let env = ContainerEnv 
+              Ubuntu 
+              [User "atidot"] 
+              "ubuntu:latest" 
+              [("pip install -q", pipModulesForInstall)]
+              empty
+              []
+              Nothing
+              Nothing
+    putStrLn . dockerfile . toDocker $ env

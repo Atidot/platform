@@ -2,9 +2,10 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PackageImports #-}
 {-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE TemplateHaskell #-}
 module Platform.Packaging.PythonImports 
     ( ModuleName
-    , PyPkg
+    , PyPkg(..)
     , runPythonImports
     , PythonImportException
     ) where
@@ -19,12 +20,18 @@ import "aeson" Data.Aeson (FromJSON, ToJSON, toEncoding, genericToEncoding, defa
 import "data-default" Data.Default (def)
 import "text" Data.Text (Text, pack, unpack)
 import "extra"      Data.Tuple.Extra ((&&&))
-import "exceptions" Control.Monad.Catch (Exception, MonadMask, MonadCatch, MonadThrow, throwM, bracket)
+import "lens" Control.Lens
+import "exceptions" Control.Monad.Catch (Exception, MonadMask, MonadCatch, MonadThrow, throwM, catchAll, catchIOError, bracket)
+import "temporary" System.IO.Temp (withSystemTempDirectory)
 import "regex-pcre" Text.Regex.PCRE
 import "language-python" Language.Python.Common.AST 
-import "language-python" Language.Python.Common.SrcLocation (SrcSpan)
-import "language-python" Language.Python.Version3.Parser (parseModule)
+import "language-python" Language.Python.Common.Token (Token, token_literal, token_span)
+import "language-python" Language.Python.Common.SrcLocation (SrcSpan(SpanCoLinear))
+import "language-python" Language.Python.Version3.Parser (parseModule, parseStmt)
+import "language-python" Language.Python.Common.ParseError (ParseError)
+import "shellmet" Shellmet
 import Platform.Packaging.Pip
+import Platform.Packaging.Pip.Types
 
 type URL = Text
 
@@ -58,26 +65,45 @@ instance Show PythonImportException where
 
 instance Exception PythonImportException
 
+makeLenses ''InstallOpts
+makeLenses ''PipInput
+
+data PkgVerdict
+    = PkgContainsModule
+    | PkgLacksModule
+    | Inconclusive
+    deriving (Show, Read, Eq, Ord, Enum, Bounded, Typeable, Data, Generic)
+
 searchAndListNames :: (MonadCatch m, MonadIO m)
                    => Text
                    -> m [Text]
 searchAndListNames pkg = do
     let firstWordRegex = "^[^ ]+(?= )" :: String
-    t <- catch (liftIO . search def def $ pkg) (const $ return "")
+    t <- catchAll (liftIO . search def def $ pkg) (const $ return "")
     let matches = getAllTextMatches (unpack t =~ firstWordRegex :: AllTextMatches [] String)
     return $ map pack matches
 
 pypiPkg :: Text -> PyPkg
 pypiPkg = PyPkg "https://pypi.org/simple/"
 
-getAST :: (MonadThrow m, MonadIO m) 
-       => String 
-       -> m (Module SrcSpan)
-getAST contents = do
+doParse :: (MonadThrow m, MonadIO m) 
+        => String 
+        -> m (Module SrcSpan, [Token])
+doParse contents = do
     let parsed = parseModule contents "" -- We don't use last arg so leave it empty
     return' parsed
-    where return' (Right p) = return $ fst p
+    where return' (Right p) = return p
           return' (Left _) = throwM FileNotParseable
+
+getAST :: (MonadThrow m, MonadIO m)
+       => String
+       -> m (Module SrcSpan)
+getAST = fmap fst . doParse
+
+getComments :: (MonadThrow m, MonadIO m)
+            => String
+            -> m [Token]
+getComments = fmap snd . doParse
 
 findPossibleMatches :: (MonadCatch m, MonadIO m)
                     => ModuleName 
@@ -91,30 +117,31 @@ findMatch :: (MonadMask m, MonadIO m)
           -> [PyPkg]
           -> m (Maybe PyPkg)
 findMatch mn pkgs = do
-    candidates <- filterM (`pkgHasModule` mn) pkgs
+    candidates <- filterM (fmap (== PkgContainsModule) . isModuleInPkg mn) pkgs
     if null candidates
        then return Nothing
        else return $ Just (head candidates)
 
--- TODO: Write out the proper package-inspection logic to check this.
-pkgHasModule :: (MonadMask m, MonadIO m)
-             => PyPkg 
-             -> ModuleName
-             -> m Bool
-pkgHasModule _ _ = 
-    bracket init'
-            fini
-            body
-    where
-        init'  = return ()
-        fini _ = return ()
-        body _ = return True
+foreignImportedModules :: Statement annot -> [DottedName annot]
+foreignImportedModules = onlyJust . foreignImportedModules'
 
-getImportNames :: Module annot -> [DottedName annot]
-getImportNames (Module statements) = onlyJust . concatMap getImports' $ statements
+foreignImportedModules' :: Statement annot -> [Maybe (DottedName annot)]
+foreignImportedModules' i@Import{}     = map (return . import_item_name) . import_items $ i
+foreignImportedModules' i@FromImport{} = if 0 == (import_relative_dots $ from_module i)
+                                           then return . import_relative_module . from_module $ i
+                                           else []
+foreignImportedModules' _              = []
+
+onlyJust :: [Maybe a] -> [a]
+onlyJust (Nothing : xs) = onlyJust xs
+onlyJust (Just x : xs)  = x : onlyJust xs
+onlyJust []             = []
+
+getForeignImportNames :: Module annot -> [DottedName annot]
+getForeignImportNames (Module statements) = onlyJust . concatMap getImports' $ statements
   where getImports' :: Statement annot -> [Maybe (DottedName annot)]
-        getImports' i@Import{}      = map (return . import_item_name) . import_items $ i
-        getImports' f@FromImport{}  = return . import_relative_module . from_module $ f
+        getImports' i@Import{}      = foreignImportedModules' i
+        getImports' f@FromImport{}  = foreignImportedModules' f
         getImports' w@While{}       = recurse . (while_body <> while_else) $ w
         getImports' f@For  {}       = recurse . (for_body <> for_else) $ f
         getImports' a@AsyncFor{}    = recurse . return . for_stmt $ a
@@ -131,10 +158,6 @@ getImportNames (Module statements) = onlyJust . concatMap getImports' $ statemen
         recurse :: [Statement annot] -> [Maybe (DottedName annot)]
         recurse = concatMap getImports'
 
-        onlyJust :: [Maybe a] -> [a]
-        onlyJust (Nothing : xs) = onlyJust xs
-        onlyJust (Just x : xs)  = x : onlyJust xs
-        onlyJust []             = []
 
 -- for TopLevel.MidLevel.ModName, this would guess
 --   "TopLevel" > "TopLevel MidLevel" > "TopLevel MidLevel ModName"
@@ -157,7 +180,8 @@ runPythonImports :: (MonadMask m, MonadIO m)
                  => String
                  -> m ([(ModuleName, PyPkg)], [ModuleName])
 runPythonImports fileContents = do
-    importNames <- map dottedToModuleName . getImportNames <$> getAST fileContents
+    importNames <- map dottedToModuleName . getForeignImportNames <$> getAST fileContents
+    explicitMatches <- mapM (getExplicitPkgOrigins . unpack . _moduleName) importNames
     possibleMatches <- mapM findPossibleMatches importNames
     matches <- zipWithM findMatch importNames possibleMatches
     return $ sortPairs (zip importNames matches)
@@ -169,3 +193,93 @@ runPythonImports fileContents = do
         sortPairs' ((m, Nothing) : xs, ys, zs) = sortPairs' (xs, ys, m : zs)
         sortPairs' ((m, Just x) : xs, ys, zs) = sortPairs' (xs, (m, x) : ys, zs)
         sortPairs' ([], ys, zs) = ([], ys, zs)
+
+makeVenv :: (MonadThrow m, MonadIO m) => FilePath ->  m ()
+makeVenv fp = liftIO $ do
+    "virtualenv" $| [pack fp]
+    "." $| [pack fp <> "/bin/activate"]
+    return ()
+
+isModuleInPkg :: (MonadMask m, MonadIO m)
+              => ModuleName
+              -> PyPkg
+              -> m PkgVerdict
+isModuleInPkg modName pkg = do
+        liftIO $ bracket init'
+                         fini
+                         body
+    where
+        init' = do
+            td <- withSystemTempDirectory "venv" return
+            "mkdir" $| [pack td]
+            makeVenv td
+            return td
+        fini td = do
+            "deactivate" $| []
+            "rm" $| ["-rf", pack td]
+            return ()
+        body = \_ -> do
+            isInstallable <- tryInstallPkg pkg
+            if isInstallable
+                then canImport modName
+                else return Inconclusive
+
+        canImport :: (MonadMask m, MonadIO m) => ModuleName -> m PkgVerdict
+        canImport modName 
+          = liftIO $ catchIOError (("python" $| ["-c", "import", _moduleName modName]) >> return PkgContainsModule) 
+                              (const $ return PkgLacksModule)
+        
+tryInstallPkg :: (MonadCatch m, MonadIO m)
+              => PyPkg
+              -> m Bool
+tryInstallPkg pkg = liftIO $ catchIOError (install def instOpts instInput >> return True) 
+                                          (const $ return False)
+    where
+        instOpts  = set installOpts_index (Just $ _pyPkg_index pkg) def
+        instInput = ReqSpecInput [ReqSpec (_pyPkg_name pkg) Nothing]
+
+getExplicitPkgOrigins :: (MonadThrow m, MonadIO m)
+                      => String
+                      -> m [([DottedName SrcSpan], PyPkg)]
+getExplicitPkgOrigins fileContents = do
+    comments <- getComments fileContents
+    let annotationFiltered = filter hasPkgAnnotation comments
+    explicitPkgs <- filterM comesAfterImport annotationFiltered
+    mapM processPkgs explicitPkgs
+    where
+        processPkgs :: (MonadThrow m, MonadIO m) => Token -> m ([DottedName SrcSpan], PyPkg)
+        processPkgs tkn = do
+            stmt <- stmtBeforeComment tkn
+            case stmt of
+              Nothing   -> throwM FileNotParseable
+              Just stmt -> return (foreignImportedModules stmt, pkgFromToken tkn)
+        comesAfterImport :: (MonadThrow m, MonadIO m) => Token -> m Bool
+        comesAfterImport tkn = do
+            stmt <- stmtBeforeComment tkn
+            return . isImport $ stmt
+        hasPkgAnnotation :: Token -> Bool
+        hasPkgAnnotation tkn = (token_literal tkn) =~ explicitPkgRegex :: Bool
+        stmtBeforeComment :: (MonadThrow m, MonadIO m) => Token -> m (Maybe (Statement SrcSpan))
+        stmtBeforeComment tkn = do
+            file <- fileFromCommentLine tkn
+            case parseStmt file "" of
+              Left _                  -> return Nothing
+              Right ([], _)           -> return Nothing
+              Right (stmt : stmts, _) -> return (Just stmt)
+        fileFromCommentLine :: (MonadThrow m, MonadIO m) => Token -> m String
+        fileFromCommentLine tkn = do
+            beginning <- fmap (+(-1)) . commentLine . token_span $ tkn 
+            return . unlines . drop beginning . lines $ fileContents
+        isImport :: Maybe (Statement annot) -> Bool
+        isImport Nothing             = False
+        isImport (Just Import{})     = True
+        isImport (Just FromImport{}) = True
+        commentLine :: (MonadThrow m, MonadIO m) => SrcSpan -> m Int
+        commentLine (SpanCoLinear _ row _ _) = return row
+        commentLine _                        = throwM FileNotParseable
+
+explicitPkgRegex :: String
+explicitPkgRegex = "(?<=!platform )(\\w|\\d)(\\w|\\d|-)*$"
+
+pkgFromToken :: Token -> PyPkg
+pkgFromToken = undefined
