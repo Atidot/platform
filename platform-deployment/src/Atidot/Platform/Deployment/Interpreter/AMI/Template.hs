@@ -71,15 +71,15 @@ resource "aws_vpc" "{{vpcName}}" {
 awsInternetGateway :: String
 awsInternetGateway = [r|
 resource "aws_internet_gateway" "{{gatewayName}}" {
-  vpc_id = "${aws_vpc.{{vpcName}}.id}"
+  vpc_id = aws_vpc.{{vpcName}}.id
 }
     |]
 
 awsSubnet :: String
 awsSubnet = [r|
 resource "aws_subnet" "{{subnetName}}" {
-  vpc_id = "${aws_vpc.{{vpcName}}.id}"
-  cidr_block = "${cidrsubnet(aws_vpc.{{vpcName}}.cidr_block, 3, 1)}"
+  vpc_id = aws_vpc.{{vpcName}}.id
+  cidr_block = cidrsubnet(aws_vpc.{{vpcName}}.cidr_block, 3, 1)
   availability_zone = "{{region}}a"
 }
     |]
@@ -87,10 +87,10 @@ resource "aws_subnet" "{{subnetName}}" {
 awsRouteTable :: String
 awsRouteTable = [r|
 resource "aws_route_table" "{{routeTableName}}" {
-  vpc_id = "${aws_vpc.{{vpcName}}.id}"
+  vpc_id = aws_vpc.{{vpcName}}.id
   route {
     cidr_block = "0.0.0.0/0"
-    gateway_id = "${aws_internet_gateway.{{gatewayName}}.id}"
+    gateway_id = aws_internet_gateway.{{gatewayName}}.id
   }
 }
     |]
@@ -98,8 +98,8 @@ resource "aws_route_table" "{{routeTableName}}" {
 awsRouteTableAssoc :: String
 awsRouteTableAssoc = [r|
 resource "aws_route_table_association" "{{routeTableAssocName}}" {
-  subnet_id = "${aws_subnet.{{subnetName}}.id}"
-  route_table_id = "${aws_route_table.{{routeTableName}}.id}"
+  subnet_id = aws_subnet.{{subnetName}}.id
+  route_table_id = aws_route_table.{{routeTableName}}.id
 }
     |]
 
@@ -122,7 +122,7 @@ resource "aws_security_group" "{{securityGroupName}}" {
       "0.0.0.0/0"
     ]
   }
-  vpc_id = "${aws_vpc.{{vpcName}}.id}"
+  vpc_id = aws_vpc.{{vpcName}}.id
 }
     |]
 
@@ -131,10 +131,10 @@ awsInstance = [r|
 resource "aws_instance" "{{instanceName}}" {
   ami = "ami-2757f631"
   instance_type = "t2.micro"
-  subnet_id = "${aws_subnet.{{subnetName}}.id}"
+  subnet_id = aws_subnet.{{subnetName}}.id
   key_name = "{{keyName}}"
   vpc_security_group_ids = [
-    "${aws_security_group.{{securityGroupName}}.id}"
+    aws_security_group.{{securityGroupName}}.id
   ]
 }
     |]
@@ -143,7 +143,7 @@ awsEip :: String
 awsEip = [r|
 resource "aws_eip" "{{eipName}}" {
   vpc = "true"
-  instance = "${aws_instance.{{instanceName}}.id}"
+  instance = aws_instance.{{instanceName}}.id
 }
     |]
 
