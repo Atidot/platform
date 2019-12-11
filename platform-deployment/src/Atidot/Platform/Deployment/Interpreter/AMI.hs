@@ -28,6 +28,7 @@ runAMI config dep =
         terraformDepDir = "terraform_dep" :: FilePath
         terraformAwsDep = renderProvider config allTemplates
         getPublicDns = T.takeWhile (/= '"') . T.tail . T.dropWhile (/= '"') . snd . T.breakOn "public_dns"
+        getInstanceId = T.takeWhile (/= '"') . T.tail . T.dropWhile (/= '"') . snd . T.breakOn "id" . T.takeWhile (/= '}') . T.dropWhile (/= '{') . snd . T.breakOn "aws_instance"
         reduceShell =  reduce $ Fold (<>) "" lineToText
         init' :: IO Text
         init' = do
@@ -36,26 +37,27 @@ runAMI config dep =
             output "example.tf" $ select $ textToLines terraformAwsDep
             procs "terraform" ["init"] stdin
             procs "terraform" ["apply", "-auto-approve"] stdin
-            applyOutput <- reduceShell $ inproc "terraform" ["show"] stdin
+            showOutput <- reduceShell $ inproc "terraform" ["show"] stdin
             sleep 6 -- wait for ssh on the remote machine to establish
-            let publicDns = getPublicDns applyOutput
+            let publicDns = getPublicDns showOutput
             sshW publicDns ["sudo","apt","update"]
             sshW publicDns ["sudo","apt","install","docker.io","-y"]
             sshW publicDns ["sudo","usermod","-aG","docker","$USER"]
             return publicDns
         fini :: Text -> IO ()
         fini publicDns = do
-          -- save ami
+            -- save ami
+            showOutput <- reduceShell $ inproc "terraform" ["show"] stdin
+            let instanceId = getInstanceId showOutput
+                amiName = instanceId <> "-ami"
+            procs "aws" ["ec2", "create-image", "--instance-id", instanceId, "--name", amiName] stdin
+
           -- destroy all resources
             procs "terraform" ["destroy"] stdin
             cd ".."
             return ()
         body :: Text -> IO ()
         body publicDns = do
-            --let [knownHostFp,pubkey,privkey] = map ("~/.ssh/" <>) ["known_hosts","terraform-keys2.pub","terraform-keys2"]
-            --putStrLn "------------------------------------------"
-            --putStrLn hostname
-            --sshW publicDns ["touch","hello"]
             _ <-  (runStateT (iterM (run $ sshW publicDns) dep) config)
             return ()
 
