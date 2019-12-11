@@ -37,7 +37,11 @@ runAMI config dep =
             procs "terraform" ["init"] stdin
             procs "terraform" ["apply", "-auto-approve"] stdin
             applyOutput <- reduceShell $ inproc "terraform" ["show"] stdin
+            sleep 6 -- wait for ssh on the remote machine to establish
             let publicDns = getPublicDns applyOutput
+            sshW publicDns ["sudo","apt","update"]
+            sshW publicDns ["sudo","apt","install","docker.io","-y"]
+            sshW publicDns ["sudo","usermod","-aG","docker","$USER"]
             return publicDns
         fini :: Text -> IO ()
         fini publicDns = do
@@ -48,21 +52,17 @@ runAMI config dep =
             return ()
         body :: Text -> IO ()
         body publicDns = do
-            let [knownHostFp,pubkey,privkey] = map ("~/.ssh/" <>) ["known_hosts","terraform-keys2.pub","terraform-keys2"]
-                port = 22
-                hostname = T.unpack publicDns
-            putStrLn "------------------------------------------"
-            putStrLn hostname
-            sshW publicDns ["touch","hello"]
-            _ <-  (runStateT (iterM (run publicDns) dep) config)
+            --let [knownHostFp,pubkey,privkey] = map ("~/.ssh/" <>) ["known_hosts","terraform-keys2.pub","terraform-keys2"]
+            --putStrLn "------------------------------------------"
+            --putStrLn hostname
+            --sshW publicDns ["touch","hello"]
+            _ <-  (runStateT (iterM (run $ sshW publicDns) dep) config)
             return ()
 
-        run :: Text -> Deployment (StateT AMIConfig IO a) -> StateT AMIConfig IO a
-        run _ (Container containerName next) = do
+        run :: ([Text] -> IO ()) -> Deployment (StateT AMIConfig IO a) -> StateT AMIConfig IO a
+        run sshW' (Container containerName next) = do
             conf <- get
-            lift $ T.putStrLn $ renderProvider conf provider
-            lift $ T.putStrLn $ renderProvider conf awsVpc
-            liftIO $ putStrLn "some container cmd"
+            lift $ sshW' ["docker","run",containerName]
             next True
         run _ (Secret secretData next) = do
             liftIO $ putStrLn "some secret thingy"
@@ -71,5 +71,5 @@ runAMI config dep =
             liftIO $ putStrLn "some storage mount"
             next True
 
-
-sshW pdns cmd = procs "ssh" (["ubuntu@"<>pdns,"-o","StrictHostKeyChecking=no  ","-i","~/.ssh/terraform-keys2"] ++ cmd) stdin
+sshW :: Text -> [Text] -> IO ()
+sshW pdns cmd = procs "ssh" (["ubuntu@"<>pdns,"-o","StrictHostKeyChecking=no","-i","~/.ssh/terraform-keys2"] ++ cmd) stdin

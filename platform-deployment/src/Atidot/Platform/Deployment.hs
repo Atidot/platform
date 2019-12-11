@@ -10,20 +10,21 @@ import "base"                   Data.Monoid
 import "base"                   Data.Typeable
 import "free"                   Control.Monad.Free
 import "free"                   Control.Monad.Free.TH
+import "text"                   Data.Text(Text)
 
 -- import qualified "containers"   Data.Map as M
--- import qualified "text"         Data.Text as T
+--import qualified "text"         Data.Text as T
 
 someFunc = putStrLn "hello"
 
 data Volume = Volume FilePath
 data Disk = Disk FilePath
 
-type Name = String
+type Name = Text
 type SecretValue = String
 
 data Deployment a
-    = Container String (Bool -> a) -- bool
+    = Container Name (Bool -> a) -- bool
     | Secret Name (SecretValue -> a)
   -- | Config FilePath (FilePath -> a)
   -- | AttachSecret SecretValue Container (Bool -> a)
@@ -35,12 +36,17 @@ type DeploymentM = Free Deployment
 
 makeFree ''Deployment
 
+hello :: DeploymentM Bool
+hello =
+    container "hello-world"
+
 kiss :: DeploymentM Bool
 kiss = do
     dbUrl  <- secret "DB_URL"
     volume1 <- mount (Disk "bli/bloo") (Volume "bli/bloo")
     b <- container "hello-world"
     return b
+
 
 
 pacificLife :: DeploymentM Bool
