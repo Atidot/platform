@@ -8,6 +8,16 @@ import "base" GHC.Generics (Generic)
 import "text" Data.Text (Text)
 
 
+data AMIConfig =
+    AMIConfig
+    { _AMIConfig_containers                 :: [String]
+    , _AMIConfig_secrets                    :: [(String,(String,Maybe String))]
+    , _AMIConfig_configs                    :: [(String,Maybe String)]
+    , _AMIConfig_mounts                     :: [(String,(String,Maybe String))]
+    , _AMIConfig_terraformConfig            :: TerraformConfig
+    }
+    deriving (Show, Read, Eq, Ord, Data, Typeable, Generic)
+
 data TerraformConfig =
     TerraformConfig
     { _TerraformConfig_region                :: !Text

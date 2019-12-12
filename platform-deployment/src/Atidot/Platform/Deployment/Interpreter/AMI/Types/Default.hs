@@ -3,6 +3,10 @@ module Atidot.Platform.Deployment.Interpreter.AMI.Types.Default where
 import "data-default" Data.Default
 import Atidot.Platform.Deployment.Interpreter.AMI.Types.Types
 
+instance Default AMIConfig where
+    def = AMIConfig [] [] [] [] def
+
+
 instance Default TerraformConfig where
     def = TerraformConfig
         { _TerraformConfig_region                = "us-east-1"

@@ -19,14 +19,14 @@ lttrace x y = trace (x ++ ":" ++ show y) y
 -- // to login
 -- // $ ssh ubuntu@<public_dns> -i ~/.ssh/terraform-keys2
 
-runAMI :: TerraformConfig -> DeploymentM a -> IO ()
+runAMI :: AMIConfig -> DeploymentM a -> IO ()
 runAMI config dep =
     bracket init'
             fini
             body
     where
         terraformDepDir = "terraform_dep" :: FilePath
-        terraformAwsDep = renderProvider config allTemplates
+        terraformAwsDep = renderProvider (_AMIConfig_terraformConfig config) allTemplates
         getPublicDns = T.takeWhile (/= '"') . T.tail . T.dropWhile (/= '"') . snd . T.breakOn "public_dns"
         getInstanceId = T.takeWhile (/= '"') . T.tail . T.dropWhile (/= '"') . snd . T.breakOn "id" . T.takeWhile (/= '}') . T.dropWhile (/= '{') . snd . T.breakOn "aws_instance"
         reduceShell =  reduce $ Fold (<>) "" lineToText
@@ -61,7 +61,7 @@ runAMI config dep =
             _ <-  (runStateT (iterM (run $ sshW publicDns) dep) config)
             return ()
 
-        run :: ([Text] -> IO ()) -> Deployment (StateT TerraformConfig IO a) -> StateT TerraformConfig IO a
+        run :: ([Text] -> IO ()) -> Deployment (StateT AMIConfig IO a) -> StateT AMIConfig IO a
         run sshW' (Container containerName next) = do
             conf <- get
             lift $ sshW' ["docker","run",containerName]
