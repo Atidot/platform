@@ -8,19 +8,19 @@ import "base" GHC.Generics (Generic)
 import "text" Data.Text (Text)
 
 
-data AMIConfig =
-    AMIConfig
-    { _AMIConfig_region                :: !Text
-    , _AMIConfig_profile               :: !Text
-    , _AMIConfig_vpcName               :: !Text
-    , _AMIConfig_gatewayName           :: !Text
-    , _AMIConfig_subnetName            :: !Text
-    , _AMIConfig_routeTableName        :: !Text
-    , _AMIConfig_routeTableAssocName   :: !Text
-    , _AMIConfig_securityGroupName     :: !Text
-    , _AMIConfig_instanceName          :: !Text
-    , _AMIConfig_eipName               :: !Text
-    , _AMIConfig_keyName               :: !Text
-    , _AMIConfig_keyPublic             :: !Text
+data TerraformConfig =
+    TerraformConfig
+    { _TerraformConfig_region                :: !Text
+    , _TerraformConfig_profile               :: !Text
+    , _TerraformConfig_vpcName               :: !Text
+    , _TerraformConfig_gatewayName           :: !Text
+    , _TerraformConfig_subnetName            :: !Text
+    , _TerraformConfig_routeTableName        :: !Text
+    , _TerraformConfig_routeTableAssocName   :: !Text
+    , _TerraformConfig_securityGroupName     :: !Text
+    , _TerraformConfig_instanceName          :: !Text
+    , _TerraformConfig_eipName               :: !Text
+    , _TerraformConfig_keyName               :: !Text
+    , _TerraformConfig_keyPublic             :: !Text
     }
     deriving (Show, Read, Eq, Ord, Data, Typeable, Generic)

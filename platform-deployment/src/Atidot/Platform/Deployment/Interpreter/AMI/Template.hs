@@ -15,26 +15,26 @@ toTemplate :: String -> Template SourcePos
 toTemplate template = either (error . show) id . runIdentity $
     parseGinger nullResolver Nothing template
 
-renderProvider :: AMIConfig -> String -> Text
-renderProvider amiConfig template = do
+renderProvider :: TerraformConfig -> String -> Text
+renderProvider config template = do
     let ctx :: GVal (Run SourcePos (Writer Text) Text)
-        ctx = toCtx amiConfig
+        ctx = toCtx config
     easyRender ctx $ toTemplate template
         where
-            toCtx :: AMIConfig -> GVal (Run SourcePos (Writer Text) Text)
+            toCtx :: TerraformConfig -> GVal (Run SourcePos (Writer Text) Text)
             toCtx conf = dict $ map (\(a,b) -> a ~> b conf)
-                [ ("region"                 , _AMIConfig_region              )
-                , ("profile"                , _AMIConfig_profile             )
-                , ("vpcName"                , _AMIConfig_vpcName             )
-                , ("gatewayName"            , _AMIConfig_gatewayName         )
-                , ("subnetName"             , _AMIConfig_subnetName          )
-                , ("routeTableName"         , _AMIConfig_routeTableName      )
-                , ("routeTableAssocName"    , _AMIConfig_routeTableAssocName )
-                , ("securityGroupName"      , _AMIConfig_securityGroupName   )
-                , ("instanceName"           , _AMIConfig_instanceName        )
-                , ("eipName"                , _AMIConfig_eipName             )
-                , ("keyName"                , _AMIConfig_keyName             )
-                , ("keyPublic"              , _AMIConfig_keyPublic           )
+                [ ("region"                 , _TerraformConfig_region              )
+                , ("profile"                , _TerraformConfig_profile             )
+                , ("vpcName"                , _TerraformConfig_vpcName             )
+                , ("gatewayName"            , _TerraformConfig_gatewayName         )
+                , ("subnetName"             , _TerraformConfig_subnetName          )
+                , ("routeTableName"         , _TerraformConfig_routeTableName      )
+                , ("routeTableAssocName"    , _TerraformConfig_routeTableAssocName )
+                , ("securityGroupName"      , _TerraformConfig_securityGroupName   )
+                , ("instanceName"           , _TerraformConfig_instanceName        )
+                , ("eipName"                , _TerraformConfig_eipName             )
+                , ("keyName"                , _TerraformConfig_keyName             )
+                , ("keyPublic"              , _TerraformConfig_keyPublic           )
                 ]
 
 allTemplates :: String

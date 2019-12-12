@@ -20,16 +20,17 @@ someFunc = putStrLn "hello"
 data Volume = Volume FilePath
 data Disk = Disk FilePath
 
+
 type Name = Text
 type SecretValue = String
 
 data Deployment a
     = Container Name (Bool -> a) -- bool
     | Secret Name (SecretValue -> a)
-  -- | Config FilePath (FilePath -> a)
-  -- | AttachSecret SecretValue Container (Bool -> a)
+    | Config FilePath (FilePath -> a)
+    | AttachSecret SecretValue String (Bool -> a)
     | Mount Disk Volume (Bool -> a)
-    | Start           ([String] -> a)
+    | Start ([String] -> a)
     deriving (Typeable, Functor)
 
 type DeploymentM = Free Deployment

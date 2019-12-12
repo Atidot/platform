@@ -19,7 +19,7 @@ lttrace x y = trace (x ++ ":" ++ show y) y
 -- // to login
 -- // $ ssh ubuntu@<public_dns> -i ~/.ssh/terraform-keys2
 
-runAMI :: AMIConfig -> DeploymentM a -> IO ()
+runAMI :: TerraformConfig -> DeploymentM a -> IO ()
 runAMI config dep =
     bracket init'
             fini
@@ -50,7 +50,7 @@ runAMI config dep =
             showOutput <- reduceShell $ inproc "terraform" ["show"] stdin
             let instanceId = getInstanceId showOutput
                 amiName = instanceId <> "-ami"
-            procs "aws" ["ec2", "create-image", "--instance-id", instanceId, "--name", amiName] stdin
+            --procs "aws" ["ec2", "create-image", "--instance-id", instanceId, "--name", amiName] stdin
 
           -- destroy all resources
             procs "terraform" ["destroy"] stdin
@@ -61,7 +61,7 @@ runAMI config dep =
             _ <-  (runStateT (iterM (run $ sshW publicDns) dep) config)
             return ()
 
-        run :: ([Text] -> IO ()) -> Deployment (StateT AMIConfig IO a) -> StateT AMIConfig IO a
+        run :: ([Text] -> IO ()) -> Deployment (StateT TerraformConfig IO a) -> StateT TerraformConfig IO a
         run sshW' (Container containerName next) = do
             conf <- get
             lift $ sshW' ["docker","run",containerName]
