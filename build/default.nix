@@ -27,5 +27,7 @@ stdenv.mkDerivation rec {
 
   buildInputs = [
     haskellEnv
+    python37Packages.pip
+    python37Packages.virtualenv
   ];
 }
