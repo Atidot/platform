@@ -11,6 +11,7 @@ import "base"                   Data.Typeable
 import "free"                   Control.Monad.Free
 import "free"                   Control.Monad.Free.TH
 import "text"                   Data.Text(Text)
+import "uuid"                   Data.UUID
 
 -- import qualified "containers"   Data.Map as M
 --import qualified "text"         Data.Text as T
@@ -23,12 +24,13 @@ data Disk = Disk FilePath
 
 type Name = Text
 type SecretValue = String
+type SecretName = UUID
 
 data Deployment a
     = Container Name (Bool -> a) -- bool
-    | Secret Name (SecretValue -> a)
+    | Secret SecretValue (SecretName -> a)
     | Config FilePath (FilePath -> a)
-    | AttachSecret SecretValue String (Bool -> a)
+    | AttachSecret SecretName Name (Bool -> a)
     | Mount Disk Volume (Bool -> a)
     | Start ([String] -> a)
     deriving (Typeable, Functor)

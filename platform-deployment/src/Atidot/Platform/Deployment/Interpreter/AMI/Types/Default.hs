@@ -4,7 +4,7 @@ import "data-default" Data.Default
 import Atidot.Platform.Deployment.Interpreter.AMI.Types.Types
 
 instance Default AMIConfig where
-    def = AMIConfig [] [] [] [] def
+    def = AMIConfig [] [] [] def
 
 
 instance Default TerraformConfig where

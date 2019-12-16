@@ -7,6 +7,7 @@ import "free"     Control.Monad.Free
 -- import qualified Data.Map as M
 import            Atidot.Platform.Deployment
 import "mtl"      Control.Monad.State
+import "uuid"     Data.UUID.V4 (nextRandom)
 
 data TestConfig =
     TestConfig
@@ -23,7 +24,8 @@ runTest config dep = do
             next True
         run (Secret secretData next) = do
             liftIO $ putStrLn "some secret thingy"
-            next ""
+            nuid <- liftIO nextRandom
+            next nuid
         run (Mount disk volume next) = do
             liftIO $ putStrLn "some storage mount"
             next True

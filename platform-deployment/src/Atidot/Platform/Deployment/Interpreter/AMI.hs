@@ -9,6 +9,7 @@ import           "free"       Control.Monad.Free
 import           "mtl"        Control.Monad.State
 import           "exceptions" Control.Monad.Catch (MonadMask, bracket)
 import           "turtle"     Turtle
+import           "uuid"       Data.UUID.V4 (nextRandom)
 
 import                        Atidot.Platform.Deployment
 import                        Atidot.Platform.Deployment.Interpreter.AMI.Template
@@ -30,6 +31,7 @@ runAMI config dep =
         getPublicDns = T.takeWhile (/= '"') . T.tail . T.dropWhile (/= '"') . snd . T.breakOn "public_dns"
         getInstanceId = T.takeWhile (/= '"') . T.tail . T.dropWhile (/= '"') . snd . T.breakOn "id" . T.takeWhile (/= '}') . T.dropWhile (/= '{') . snd . T.breakOn "aws_instance"
         reduceShell =  reduce $ Fold (<>) "" lineToText
+        rSecretsDir = "/etc/.secrets"
         init' :: IO Text
         init' = do
             mktree terraformDepDir
@@ -43,6 +45,7 @@ runAMI config dep =
             sshW publicDns ["sudo","apt","update"]
             sshW publicDns ["sudo","apt","install","docker.io","-y"]
             sshW publicDns ["sudo","usermod","-aG","docker","$USER"]
+            sshW publicDns ["mkdir",rSecretsDir]
             return publicDns
         fini :: Text -> IO ()
         fini publicDns = do
@@ -58,20 +61,46 @@ runAMI config dep =
             return ()
         body :: Text -> IO ()
         body publicDns = do
-            _ <-  (runStateT (iterM (run $ sshW publicDns) dep) config)
+            _ <-  (runStateT (iterM (run publicDns) dep) config)
             return ()
 
-        run :: ([Text] -> IO ()) -> Deployment (StateT AMIConfig IO a) -> StateT AMIConfig IO a
-        run sshW' (Container containerName next) = do
+        run :: Text -> Deployment (StateT AMIConfig IO a) -> StateT AMIConfig IO a
+        run publicDns (Container containerName next) = do
             conf <- get
-            lift $ sshW' ["docker","run",containerName]
+            let diskMappings = filter ((== Just containerName) . snd . snd ) $ _AMIConfig_mounts conf
+                diskMappingsInDocker = concatMap (\(vol,(disk,_)) -> ["-v",T.pack vol <> ":" <> T.pack disk]) diskMappings
+            lift $ sshW publicDns $ ["docker","run"] <> diskMappingsInDocker <> [containerName]
             next True
-        run _ (Secret secretData next) = do
-            liftIO $ putStrLn "some secret thingy"
-            next ""
-        run _ (Mount disk volume next) = do
-            liftIO $ putStrLn "some storage mount"
+
+        run publicDns (Secret secretData next) = do
+            isFile <- testfile $ decodeString secretData
+            if isFile then do
+                -- path <- copy file into remote location
+                conf <- get
+                nuid <- liftIO nextRandom
+                scpW publicDns (T.pack secretData) rSecretsDir
+                let fname = encodeString $ fromText rSecretsDir </> filename (decodeString secretData)
+                -- add path to state
+                    conf' = conf{ _AMIConfig_secrets = _AMIConfig_secrets conf <> [(nuid,(secretData,Just fname,Nothing))]}
+                next nuid
+            else do
+                conf <- get
+                nuid <- liftIO nextRandom
+                -- store directly in the state
+                let conf' = conf{ _AMIConfig_secrets = _AMIConfig_secrets conf <> [(nuid,(secretData,Nothing,Nothing))]}
+                put conf'
+                next nuid
+
+        run _ (Mount (Disk disk) (Volume volume) next) = do
+            conf <- get
+            let containerName = case lookup volume $ _AMIConfig_mounts conf of
+                    Just (_,cont) -> cont
+                    Nothing       -> Nothing
+                newMounts = (<> [(volume,(disk,containerName))]) $ filter ((/= volume) . fst) $ _AMIConfig_mounts conf
+            put $ conf{_AMIConfig_mounts = newMounts}
             next True
 
 sshW :: Text -> [Text] -> IO ()
-sshW pdns cmd = procs "ssh" (["ubuntu@"<>pdns,"-o","StrictHostKeyChecking=no","-i","~/.ssh/terraform-keys2"] ++ cmd) stdin
+sshW pdns cmd = procs "ssh" (["ubuntu@"<>pdns,"-o","StrictHostKeyChecking=no","-i","~/.ssh/terraform-keys2"] <> cmd) stdin
+
+scpW pdns lcl rmt = procs "scp" ["-o","StrictHostKeyChecking=no","-i","~/.ssh/terraform-keys2",lcl, "ubuntu" <> "@" <> pdns <> ":" <> rmt] stdin

@@ -6,14 +6,20 @@ import "base" Data.Data (Data)
 import "base" Data.Typeable (Typeable)
 import "base" GHC.Generics (Generic)
 import "text" Data.Text (Text)
+import "uuid" Data.UUID
 
+type ContainerName = Text
+type DiskName = String
+type VolumeName = String
+type SecretName = UUID
+type SecretData = String
+type SecretAsMount = FilePath -- for the case that the secret is a file
 
 data AMIConfig =
     AMIConfig
-    { _AMIConfig_containers                 :: [String]
-    , _AMIConfig_secrets                    :: [(String,(String,Maybe String))]
+    { _AMIConfig_secrets                    :: [(SecretName,(SecretData,Maybe SecretAsMount,Maybe ContainerName))]
     , _AMIConfig_configs                    :: [(String,Maybe String)]
-    , _AMIConfig_mounts                     :: [(String,(String,Maybe String))]
+    , _AMIConfig_mounts                     :: [(VolumeName,(DiskName,Maybe ContainerName))]
     , _AMIConfig_terraformConfig            :: TerraformConfig
     }
     deriving (Show, Read, Eq, Ord, Data, Typeable, Generic)
