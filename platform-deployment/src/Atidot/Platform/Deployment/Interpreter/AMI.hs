@@ -16,7 +16,6 @@ import                        Atidot.Platform.Deployment
 import                        Atidot.Platform.Deployment.Interpreter.AMI.Template
 import                        Atidot.Platform.Deployment.Interpreter.AMI.Types
 
-lttrace x y = trace (x ++ ":" ++ show y) y
 -- // to login
 -- // $ ssh ubuntu@<public_dns> -i ~/.ssh/terraform-keys2
 
