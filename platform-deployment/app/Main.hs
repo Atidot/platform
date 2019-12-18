@@ -6,4 +6,4 @@ import                Atidot.Platform.Deployment.Interpreter.AMI
 import                Atidot.Platform.Deployment.Interpreter.AMI.Types
 
 main :: IO ()
-main = runAMI def hello
+main = runAMI def kiss

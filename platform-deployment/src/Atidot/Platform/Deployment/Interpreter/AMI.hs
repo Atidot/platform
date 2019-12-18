@@ -10,15 +10,16 @@ import           "mtl"        Control.Monad.State
 import           "exceptions" Control.Monad.Catch (MonadMask, bracket)
 import           "turtle"     Turtle
 import           "uuid"       Data.UUID.V4 (nextRandom)
+import           "directory"  System.Directory (doesFileExist)
 
 import                        Atidot.Platform.Deployment
 import                        Atidot.Platform.Deployment.Interpreter.AMI.Template
 import                        Atidot.Platform.Deployment.Interpreter.AMI.Types
-import Debug.Trace
 
 lttrace x y = trace (x ++ ":" ++ show y) y
 -- // to login
 -- // $ ssh ubuntu@<public_dns> -i ~/.ssh/terraform-keys2
+
 
 runAMI :: AMIConfig -> DeploymentM a -> IO ()
 runAMI config dep =
@@ -29,9 +30,16 @@ runAMI config dep =
         terraformDepDir = "terraform_dep" :: FilePath
         terraformAwsDep = renderProvider (_AMIConfig_terraformConfig config) allTemplates
         getPublicDns = T.takeWhile (/= '"') . T.tail . T.dropWhile (/= '"') . snd . T.breakOn "public_dns"
-        getInstanceId = T.takeWhile (/= '"') . T.tail . T.dropWhile (/= '"') . snd . T.breakOn "id" . T.takeWhile (/= '}') . T.dropWhile (/= '{') . snd . T.breakOn "aws_instance"
+
+        getInstanceId = T.takeWhile (/= '"')
+                      . T.tail
+                      . T.dropWhile (/= '"')
+                      . snd
+                      . T.breakOn "id"
+                      . T.takeWhile (/= '}') . T.dropWhile (/= '{') . snd . T.breakOn "aws_instance"
+
         reduceShell =  reduce $ Fold (<>) "" lineToText
-        rSecretsDir = "/etc/.secrets"
+        rSecretsDir = "/home/ubuntu/.secrets"
         init' :: IO Text
         init' = do
             mktree terraformDepDir
@@ -40,7 +48,7 @@ runAMI config dep =
             procs "terraform" ["init"] stdin
             procs "terraform" ["apply", "-auto-approve"] stdin
             showOutput <- reduceShell $ inproc "terraform" ["show"] stdin
-            sleep 6 -- wait for ssh on the remote machine to establish
+            sleep 8 -- wait for ssh on the remote machine to establish
             let publicDns = getPublicDns showOutput
             sshW publicDns ["sudo","apt","update"]
             sshW publicDns ["sudo","apt","install","docker.io","-y"]
@@ -73,7 +81,7 @@ runAMI config dep =
             next True
 
         run publicDns (Secret secretData next) = do
-            isFile <- testfile $ decodeString secretData
+            isFile <- liftIO $ doesFileExist secretData
             if isFile then do
                 -- path <- copy file into remote location
                 conf <- get

@@ -35,6 +35,7 @@ renderProvider config template = do
                 , ("eipName"                , _TerraformConfig_eipName             )
                 , ("keyName"                , _TerraformConfig_keyName             )
                 , ("keyPublic"              , _TerraformConfig_keyPublic           )
+                , ("s3BucketName"           , _TerraformConfig_s3BucketName        )
                 ]
 
 allTemplates :: String
@@ -49,6 +50,7 @@ allTemplates = foldl1 (<>)
     , awsInstance
     , awsEip
     , awsKeyPair
+    , awsS3Bucket
     ]
 
 provider :: String
@@ -154,3 +156,30 @@ resource "aws_key_pair" "{{keyName}}" {
   public_key = "{{keyPublic}}"
 }
     |]
+
+awsS3Bucket :: String
+awsS3Bucket = [r|
+resource "aws_s3_bucket" "{{s3BucketName}}" {
+  bucket = "atidot-tf-test-bucket"
+  acl    = "private"
+}
+  |]
+
+
+awsEbsVolume :: String
+awsEbsVolume = [r|
+resource "aws_volume_attachment" "ebs_att" {
+  device_name = "/dev/sdg"
+  volume_id   = "vol-0d2df0f8a79885bc3"
+  instance_id = aws_instance.atidot-micro-instance.id
+  skip_destroy = true
+}
+  |]
+
+
+  -- resource "aws_volume_attachment" "ebs-attachment" {
+    -- device_name = "/dev/sdg"
+    -- volume_id   = "vol-01ac704e80ba48949"
+    -- instance_id = aws_instance.atidot-micro-instance.id
+    -- skip_destroy = true
+  -- }

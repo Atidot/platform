@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 4f7564042eaf2d01cb6e811eeb05110ad3e88a75d7e12a75103dbc6a18f5a3fb
+-- hash: 939af594519ce84ff83c0e3c488487de647be8e028ff9e8a2c398f3e37ad1f27
 
 name:           platform-deployment
 version:        0.1.0.0
@@ -43,6 +43,7 @@ library
       aeson
     , base >=4.7 && <5
     , data-default
+    , directory
     , exceptions
     , free
     , ginger
@@ -65,6 +66,7 @@ executable platform-deployment-exe
       aeson
     , base >=4.7 && <5
     , data-default
+    , directory
     , exceptions
     , free
     , ginger
@@ -89,6 +91,7 @@ test-suite platform-deployment-test
       aeson
     , base >=4.7 && <5
     , data-default
+    , directory
     , exceptions
     , free
     , ginger

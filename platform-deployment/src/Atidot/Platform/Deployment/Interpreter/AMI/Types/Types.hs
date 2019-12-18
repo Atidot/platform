@@ -38,5 +38,6 @@ data TerraformConfig =
     , _TerraformConfig_eipName               :: !Text
     , _TerraformConfig_keyName               :: !Text
     , _TerraformConfig_keyPublic             :: !Text
+    , _TerraformConfig_s3BucketName          :: !Text
     }
     deriving (Show, Read, Eq, Ord, Data, Typeable, Generic)
