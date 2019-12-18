@@ -26,6 +26,6 @@ runTest config dep = do
             liftIO $ putStrLn "some secret thingy"
             nuid <- liftIO nextRandom
             next nuid
-        run (Mount disk volume next) = do
+        run (Mount disk next) = do
             liftIO $ putStrLn "some storage mount"
-            next True
+            next "some volumn mapping"

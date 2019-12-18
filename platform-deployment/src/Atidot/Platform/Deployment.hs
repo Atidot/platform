@@ -25,14 +25,19 @@ data Disk = Disk FilePath
 type Name = Text
 type SecretValue = String
 type SecretName = UUID
+type DiskName = Text
+type VolumeName = Text
 
 data Deployment a
+    -- resource declarations
     = Container Name (Bool -> a) -- bool
     | Secret SecretValue (SecretName -> a)
+    | Mount DiskName (VolumeName -> a)
     | Config FilePath (FilePath -> a)
+    -- resouce attachments
     | AttachSecret SecretName Name (Bool -> a)
-    | Mount Disk Volume (Bool -> a)
-    | Start ([String] -> a)
+    | AttachVolume VolumeName Name (Bool -> a)
+
     deriving (Typeable, Functor)
 
 type DeploymentM = Free Deployment
@@ -46,7 +51,7 @@ hello =
 kiss :: DeploymentM Bool
 kiss = do
     dbUrl  <- secret "DB_URL"
-    volume1 <- mount (Disk "bli/bloo") (Volume "bli/bloo")
+    volume1 <- mount "bli/bloo"
     b <- container "hello-world"
     return b
 
@@ -56,8 +61,8 @@ pacificLife :: DeploymentM Bool
 pacificLife = do
     dbUrl  <- secret "DB_URL"
     dbPass <- secret "DB_PASSWORD"
-    volume1 <- mount (Disk "bli/bloo") (Volume "bli/bloo")
-    volume2 <- mount (Disk "bli/bliiii/oooo") (Volume "bli/bli")
+    volume1 <- mount "bli/bloo"
+    volume2 <- mount "bli/bliiii/oooo"
     b <- container "atidot/undins"
     b <- container "atidot/undins2"
     return b

@@ -75,7 +75,7 @@ runAMI config dep =
         run publicDns (Container containerName next) = do
             conf <- get
             let diskMappings = filter ((== Just containerName) . snd . snd ) $ _AMIConfig_mounts conf
-                diskMappingsInDocker = concatMap (\(vol,(disk,_)) -> ["-v",T.pack vol <> ":" <> T.pack disk]) diskMappings
+                diskMappingsInDocker = concatMap (\(vol,(disk,_)) -> ["-v",vol <> ":" <> disk]) diskMappings
             lift $ sshW publicDns $ ["docker","run"] <> diskMappingsInDocker <> [containerName]
             next True
 
@@ -98,14 +98,16 @@ runAMI config dep =
                 put conf'
                 next nuid
 
-        run _ (Mount (Disk disk) (Volume volume) next) = do
+        run _ (Mount disk next) = do
             conf <- get
+            nuid <- liftIO nextRandom
+            let volume = T.pack $ "disk-" <> show nuid
             let containerName = case lookup volume $ _AMIConfig_mounts conf of
                     Just (_,cont) -> cont
                     Nothing       -> Nothing
                 newMounts = (<> [(volume,(disk,containerName))]) $ filter ((/= volume) . fst) $ _AMIConfig_mounts conf
             put $ conf{_AMIConfig_mounts = newMounts}
-            next True
+            next volume
 
 sshW :: Text -> [Text] -> IO ()
 sshW pdns cmd = procs "ssh" (["ubuntu@"<>pdns,"-o","StrictHostKeyChecking=no","-i","~/.ssh/terraform-keys2"] <> cmd) stdin

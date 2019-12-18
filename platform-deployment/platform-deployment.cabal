@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 939af594519ce84ff83c0e3c488487de647be8e028ff9e8a2c398f3e37ad1f27
+-- hash: 9f63ce88dfeef4bfe27056201f0d2911da439f5ca94d8b5c34de2e17fa0acf1b
 
 name:           platform-deployment
 version:        0.1.0.0
@@ -33,6 +33,7 @@ library
       Atidot.Platform.Deployment.Interpreter.AMI.Types
       Atidot.Platform.Deployment.Interpreter.AMI.Types.Default
       Atidot.Platform.Deployment.Interpreter.AMI.Types.Types
+      Atidot.Platform.Deployment.Interpreter.Terraform
       Atidot.Platform.Deployment.Interpreter.Test
   other-modules:
       Paths_platform_deployment

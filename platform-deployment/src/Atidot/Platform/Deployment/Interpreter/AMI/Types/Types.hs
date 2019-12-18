@@ -9,8 +9,8 @@ import "text" Data.Text (Text)
 import "uuid" Data.UUID
 
 type ContainerName = Text
-type DiskName = String
-type VolumeName = String
+type DiskName = Text
+type VolumeName = Text
 type SecretName = UUID
 type SecretData = String
 type SecretAsMount = FilePath -- for the case that the secret is a file
