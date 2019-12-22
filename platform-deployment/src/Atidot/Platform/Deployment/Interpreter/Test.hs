@@ -24,8 +24,7 @@ runTest config dep = do
             next True
         run (Secret secretData next) = do
             liftIO $ putStrLn "some secret thingy"
-            nuid <- liftIO nextRandom
-            next nuid
+            next ""
         run (Mount disk next) = do
             liftIO $ putStrLn "some storage mount"
             next "some volumn mapping"

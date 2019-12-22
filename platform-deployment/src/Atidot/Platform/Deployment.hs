@@ -24,7 +24,7 @@ data Disk = Disk FilePath
 
 type Name = Text
 type SecretValue = String
-type SecretName = UUID
+type SecretName = Text
 type DiskName = Text
 type VolumeName = Text
 
@@ -51,7 +51,7 @@ hello =
 kiss :: DeploymentM Bool
 kiss = do
     dbUrl  <- secret "DB_URL"
-    volume1 <- mount "bli/bloo"
+    volume1 <- mount "data"
     b <- container "hello-world"
     return b
 

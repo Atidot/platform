@@ -12,6 +12,7 @@ import           "turtle"     Turtle
 import           "uuid"       Data.UUID.V4 (nextRandom)
 import           "directory"  System.Directory (doesFileExist)
 
+import                        Atidot.Platform.Deployment.Interpreter.Utils
 import                        Atidot.Platform.Deployment
 import                        Atidot.Platform.Deployment.Interpreter.AMI.Template
 import                        Atidot.Platform.Deployment.Interpreter.AMI.Types
@@ -26,19 +27,7 @@ runAMI config dep =
             fini
             body
     where
-        terraformDepDir = "terraform_dep" :: FilePath
         terraformAwsDep = renderProvider (_AMIConfig_terraformConfig config) allTemplates
-        getPublicDns = T.takeWhile (/= '"') . T.tail . T.dropWhile (/= '"') . snd . T.breakOn "public_dns"
-
-        getInstanceId = T.takeWhile (/= '"')
-                      . T.tail
-                      . T.dropWhile (/= '"')
-                      . snd
-                      . T.breakOn "id"
-                      . T.takeWhile (/= '}') . T.dropWhile (/= '{') . snd . T.breakOn "aws_instance"
-
-        reduceShell =  reduce $ Fold (<>) "" lineToText
-        rSecretsDir = "/home/ubuntu/.secrets"
         init' :: IO Text
         init' = do
             mktree terraformDepDir
@@ -89,14 +78,14 @@ runAMI config dep =
                 let fname = encodeString $ fromText rSecretsDir </> filename (decodeString secretData)
                 -- add path to state
                     conf' = conf{ _AMIConfig_secrets = _AMIConfig_secrets conf <> [(nuid,(secretData,Just fname,Nothing))]}
-                next nuid
+                next $ T.pack $ show nuid
             else do
                 conf <- get
                 nuid <- liftIO nextRandom
                 -- store directly in the state
                 let conf' = conf{ _AMIConfig_secrets = _AMIConfig_secrets conf <> [(nuid,(secretData,Nothing,Nothing))]}
                 put conf'
-                next nuid
+                next $ T.pack $ show nuid
 
         run _ (Mount disk next) = do
             conf <- get

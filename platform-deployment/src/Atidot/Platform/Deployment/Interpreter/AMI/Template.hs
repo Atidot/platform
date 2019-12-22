@@ -50,7 +50,6 @@ allTemplates = foldl1 (<>)
     , awsInstance
     , awsEip
     , awsKeyPair
-    , awsS3Bucket
     ]
 
 provider :: String
