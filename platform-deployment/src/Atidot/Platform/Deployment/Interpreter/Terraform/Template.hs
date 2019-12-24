@@ -50,6 +50,7 @@ defTemplates = foldl1 (<>)
     , awsEip
     , awsKeyPair
     , awsInstance
+    , dockerInstallProvisioner
     ]
 
 
@@ -66,13 +67,44 @@ resource "aws_instance" "{{instanceName}}" {
 }
     |]
 
-nullRemoteProvsioner :: [Cmd] -> [SecretName] -> String
-nullRemoteProvsioner cmds _ = [r|
-resource "null_resource" "example_provisioner" {
+
+dockerInstallProvisioner :: String
+dockerInstallProvisioner = [r|
+resource "null_resource" "docker_install" {
 
   triggers = {
     public_ip = aws_eip.{{eipName}}.id
     volume_id = aws_volume_attachment.{{ebsVolumeName}}.id
+  }
+
+  connection {
+    user        = "ubuntu"
+    host        = aws_eip.{{eipName}}.public_ip
+    agent       = false
+    private_key = file("~/.ssh/{{keyName}}")
+  }
+
+  provisioner "remote-exec" {
+    inline = [
+"sudo apt update",
+"sudo apt install docker.io -y",
+"sudo usermod -aG docker $USER",
+    ]
+  }
+
+}
+    |]
+
+
+nullRemoteProvsioner :: [Cmd] -> [SecretName] -> String
+nullRemoteProvsioner cmds _ = [r|
+resource "null_resource" "mount_and_pull" {
+
+  triggers = {
+    public_ip = aws_eip.{{eipName}}.id
+    volume_id = aws_volume_attachment.{{ebsVolumeName}}.id
+    docker_install = null_resource.docker_install.id
+
   }
 
   connection {
