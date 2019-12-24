@@ -72,12 +72,12 @@ resource "null_resource" "example_provisioner" {
 
   triggers = {
     public_ip = aws_eip.{{eipName}}.id
-    volume_id = aws_volume_attachment.atidot_ebs_vol_1.id
+    volume_id = aws_volume_attachment.{{ebsVolumeName}}.id
   }
 
   connection {
     user        = "ubuntu"
-    host        =  aws_eip.{{eipName}}.public_ip
+    host        = aws_eip.{{eipName}}.public_ip
     agent       = false
     private_key = file("~/.ssh/{{keyName}}")
   }

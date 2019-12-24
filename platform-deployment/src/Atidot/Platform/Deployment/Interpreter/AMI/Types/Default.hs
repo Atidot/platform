@@ -21,4 +21,5 @@ instance Default TerraformConfig where
         , _TerraformConfig_eipName               = "atidot-eip"
         , _TerraformConfig_keyName               = "terraform-keys2"
         , _TerraformConfig_s3BucketName          = "atidot-s3-bucket"
+        , _TerraformConfig_ebs_volume            = "atidot_ebs_vol_1"
         }

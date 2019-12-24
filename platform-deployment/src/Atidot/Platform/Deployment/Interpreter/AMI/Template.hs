@@ -35,6 +35,7 @@ renderProvider config template = do
                 , ("eipName"                , _TerraformConfig_eipName             )
                 , ("keyName"                , _TerraformConfig_keyName             )
                 , ("s3BucketName"           , _TerraformConfig_s3BucketName        )
+                , ("ebsVolumeName"          , _TerraformConfig_ebs_volume          )
                 ]
 
 allTemplates :: String
