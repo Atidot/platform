@@ -34,7 +34,6 @@ renderProvider config template = do
                 , ("instanceName"           , _TerraformConfig_instanceName        )
                 , ("eipName"                , _TerraformConfig_eipName             )
                 , ("keyName"                , _TerraformConfig_keyName             )
-                , ("keyPublic"              , _TerraformConfig_keyPublic           )
                 , ("s3BucketName"           , _TerraformConfig_s3BucketName        )
                 ]
 
@@ -152,7 +151,7 @@ awsKeyPair :: String
 awsKeyPair = [r|
 resource "aws_key_pair" "{{keyName}}" {
   key_name   = "{{keyName}}"
-  public_key = "{{keyPublic}}"
+  public_key = file("~/.ssh/{{keyName}}.pub")
 }
     |]
 

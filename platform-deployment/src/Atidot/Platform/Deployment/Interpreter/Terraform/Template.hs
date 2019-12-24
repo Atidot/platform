@@ -8,7 +8,7 @@ import "mtl"            Control.Monad.Writer (Writer)
 import "mtl"            Control.Monad.Identity (Identity(..))
 import "data-default" Data.Default
 import Atidot.Platform.Deployment.Interpreter.AMI.Types hiding (DiskName,SecretName,VolumeName)
-import Atidot.Platform.Deployment.Interpreter.AMI.Template hiding (renderProvider, awsInstance,allTemplates, awsEbsVolume)
+import Atidot.Platform.Deployment.Interpreter.AMI.Template hiding (awsInstance,allTemplates, awsEbsVolume)
 
 instance Default TerraformExtendedConfig where
     def = TerraformExtendedConfig [] [] [] def $ zip ["xvdh","sdf","sdg","sdh","sdj"] ["vol-01ac704e80ba48949"]
@@ -37,29 +37,6 @@ renderTerraform (TerraformExtendedConfig cmds disks _secrets tconf _) =
         ebsVolumes = foldl1 (<>) $ zipWith3 awsEbsVolume (map (\i -> "atidot_ebs_vol_" ++ show i) [1..]) devNames diskNames
     in otherTemplates <> ebsVolumes <> awsInstanceTemplate
 
-
-renderProvider :: TerraformConfig -> String -> Text
-renderProvider config template = do
-    let ctx :: GVal (Run SourcePos (Writer Text) Text)
-        ctx = toCtx config
-    easyRender ctx $ toTemplate template
-        where
-            toCtx :: TerraformConfig -> GVal (Run SourcePos (Writer Text) Text)
-            toCtx conf = dict $ map (\(a,b) -> a ~> b conf)
-                [ ("region"                 , _TerraformConfig_region              )
-                , ("profile"                , _TerraformConfig_profile             )
-                , ("vpcName"                , _TerraformConfig_vpcName             )
-                , ("gatewayName"            , _TerraformConfig_gatewayName         )
-                , ("subnetName"             , _TerraformConfig_subnetName          )
-                , ("routeTableName"         , _TerraformConfig_routeTableName      )
-                , ("routeTableAssocName"   , _TerraformConfig_routeTableAssocName )
-                , ("securityGroupName"      , _TerraformConfig_securityGroupName   )
-                , ("instanceName"           , _TerraformConfig_instanceName        )
-                , ("eipName"                , _TerraformConfig_eipName             )
-                , ("keyName"                , _TerraformConfig_keyName             )
-                , ("keyPublic"              , _TerraformConfig_keyPublic           )
-                , ("s3BucketName"           , _TerraformConfig_s3BucketName        )
-                ]
 
 defTemplates :: String
 defTemplates = foldl1 (<>)
@@ -95,7 +72,7 @@ resource "null_resource" "example_provisioner" {
 
   triggers = {
     public_ip = aws_eip.{{eipName}}.id
-    instance_id = aws_instance.{{instanceName}}.id
+    volume_id = aws_volume_attachment.atidot_ebs_vol_1.id
   }
 
   connection {
