@@ -31,7 +31,7 @@ data TerraformExtendedConfig = TerraformExtendedConfig
 
 renderTerraform :: TerraformExtendedConfig -> Text
 renderTerraform (TerraformExtendedConfig cmds disks _secrets tconf _) =
-    let awsInstanceTemplate = renderProvider tconf $ awsInstance cmds disks []
+    let awsInstanceTemplate = renderProvider tconf $ nullRemoteProvsioner cmds []
         otherTemplates = renderProvider tconf $ defTemplates
         (devNames, diskNames) = unzip disks
         ebsVolumes = foldl1 (<>) $ zipWith3 awsEbsVolume (map (\i -> "atidot_ebs_vol_" ++ show i) [1..]) devNames diskNames
@@ -72,11 +72,12 @@ defTemplates = foldl1 (<>)
     , awsSecurityGroup
     , awsEip
     , awsKeyPair
+    , awsInstance
     ]
 
 
-awsInstance :: [Cmd] -> [(DiskName,VolumeName)] -> [SecretName] -> String
-awsInstance cmds _ _ = [r|
+awsInstance :: String
+awsInstance = [r|
 resource "aws_instance" "{{instanceName}}" {
   ami = "ami-2757f631"
   instance_type = "t2.micro"
@@ -85,19 +86,37 @@ resource "aws_instance" "{{instanceName}}" {
   vpc_security_group_ids = [
     aws_security_group.{{securityGroupName}}.id
   ]
+}
+    |]
+
+nullRemoteProvsioner :: [Cmd] -> [SecretName] -> String
+nullRemoteProvsioner cmds _ = [r|
+resource "null_resource" "example_provisioner" {
+
+  triggers = {
+    public_ip = aws_eip.{{eipName}}.id
+    instance_id = aws_instance.{{instanceName}}.id
+  }
+
+  connection {
+    user        = "ubuntu"
+    host        =  aws_eip.{{eipName}}.public_ip
+    agent       = false
+    private_key = file("~/.ssh/{{keyName}}")
+  }
     |] <>
     genExec cmds
   <> [r|
 }
     |]
     where
+
         genExec :: [Cmd] -> String
-        genExec = unlines . map genExecSingle
-        genExecSingle :: Cmd -> String
-        genExecSingle cmd = [r|
-  provisioner "local-exec" {
-    command = |] <> show cmd <>
-            [r|
+        genExec cmds = [r|
+  provisioner "remote-exec" {
+    inline = [
+|] <> unlines ( map ((\l -> l <> ","). show) cmds) <>
+            [r|    ]
   }
             |]
 

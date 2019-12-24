@@ -65,7 +65,7 @@ awsVpc :: String
 awsVpc = [r|
 resource "aws_vpc" "{{vpcName}}" {
   cidr_block = "10.0.0.0/16"
-  enable_dns_hostnames = "true"
+  enable_dns_hostnames = true
 }
     |]
 
@@ -174,11 +174,3 @@ resource "aws_volume_attachment" "ebs_att" {
   skip_destroy = true
 }
   |]
-
-
-  -- resource "aws_volume_attachment" "ebs-attachment" {
-    -- device_name = "/dev/sdg"
-    -- volume_id   = "vol-01ac704e80ba48949"
-    -- instance_id = aws_instance.atidot-micro-instance.id
-    -- skip_destroy = true
-  -- }

@@ -40,11 +40,13 @@ runTerraform config dep =
             addSecret secretName
             next $ T.pack secretName
         run (Mount folderName next) = do
-            physDisk <- getNextDisk
-            uncurry addDisk physDisk
+            (devMapping, volId) <- getNextDisk
+            addDisk devMapping volId
             let folderDir = "/" <> T.unpack folderName
-            -- updateExec ["sudo","mkdir","-p",folderDir]
-            -- updateExec ["sudo","mount", "/dev/" <> fst physDisk, folderDir]
+            updateExec ["sudo","mkdir","-p",folderDir]
+            updateExec ["sudo","mount", "/dev/" <> devMapping, folderDir]
+            updateExec ["echo", "/dev/" <> devMapping, folderDir, "xfs", "defaults,nofail",  "0",  "2", "|", "sudo", "tee", "-a", "/etc/fstab"]
+            updateExec ["sudo","cat","/etc/fstab"]
             next $ T.pack folderDir
 
 
