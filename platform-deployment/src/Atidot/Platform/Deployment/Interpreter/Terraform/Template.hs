@@ -30,12 +30,19 @@ data TerraformExtendedConfig = TerraformExtendedConfig
     }
 
 renderTerraform :: TerraformExtendedConfig -> Text
-renderTerraform (TerraformExtendedConfig cmds disks _secrets tconf _) =
+renderTerraform (TerraformExtendedConfig cmds disks secrets tconf _) =
     let awsInstanceTemplate = renderProvider tconf $ nullRemoteProvsioner cmds []
         otherTemplates = renderProvider tconf $ defTemplates
         (devNames, diskNames) = unzip disks
         ebsVolumes = foldl1 (<>) $ zipWith3 awsEbsVolume (map (\i -> "atidot_ebs_vol_" ++ show i) [1..]) devNames diskNames
-    in otherTemplates <> ebsVolumes <> awsInstanceTemplate
+        -- secretDeclarations = map awsSecret secrets
+        -- secretsProvsioning = renderProvider tconf $ secretsProvisioner secrets
+    in foldl1 (<>) $
+      [ otherTemplates
+      , ebsVolumes
+      , awsInstanceTemplate]
+  --    , secretsProvsioning
+  --    ] <> secretDeclarations
 
 
 defTemplates :: String
@@ -95,6 +102,35 @@ resource "null_resource" "docker_install" {
 }
     |]
 
+secretsProvisioner :: [SecretName] -> String
+secretsProvisioner [] = []
+secretsProvisioner secrets = [r|
+resource "null_resource" "secrets_provisioner" {
+
+  triggers = {
+    public_ip = aws_eip.{{eipName}}.id
+    volume_id = aws_volume_attachment.{{ebsVolumeName}}.id
+  }
+
+  connection {
+    user        = "ubuntu"
+    host        = aws_eip.{{eipName}}.public_ip
+    agent       = false
+    private_key = file("~/.ssh/{{keyName}}")
+  }
+
+  provisioner "remote-exec" {
+    inline = [|] <>
+    unlines (map ( (\l -> l <> ",") . show . commandifySecret . replaceIllegalTerraformName) secrets)
+    <> [r|]
+  }
+
+}
+    |]
+    where
+      commandifySecret :: String -> String
+      commandifySecret secret = [r| printf "${aws_secretsmanager_secret_version.|] <> secret <> [r|-value.secret_string}\n" >> ~/.bashrc |]
+
 
 nullRemoteProvsioner :: [Cmd] -> [SecretName] -> String
 nullRemoteProvsioner cmds _ = [r|
@@ -149,3 +185,60 @@ resource "aws_volume_attachment" "{{name}}" {
   skip_destroy = true
 }
   |]
+
+awsSecret :: SecretName -> Text
+awsSecret name =
+    let ctx :: GVal (Run SourcePos (Writer Text) Text)
+        ctx = dict $ map (\(a,b) -> a ~> b)
+            [ ("name"              , name              )
+            , ("legalName"         , replaceIllegalTerraformName name)
+            ]
+    in easyRender ctx $ toTemplate template
+  where
+    template = [r|
+resource "aws_secretsmanager_secret" "{{legalName}}" {
+  name = "{{name}}"
+}
+
+resource "aws_secretsmanager_secret_version" "{{legalName}}-value" {
+  secret_id = aws_secretsmanager_secret.{{legalName}}.id
+}
+# can be accessed by calling:               aws_secretsmanager_secret_version.{{legalName}}-value.secret_string
+# can be encoded and then to access values: jsondecode(aws_secretsmanager_secret_version.{{legalName}}-value.secret_string)["key1"]
+|]
+
+replaceIllegalTerraformName =
+    let repl '/' = '_'
+        repl  c   = c
+    in map repl
+
+--
+-- "sudo apt install awscli -y",
+-- "aws configure set aws_access_key_id ${var.aws_access_key_id}"
+-- "aws configure set aws_secret_access_key ${var.aws_secret_access_key}"
+-- "aws configure set default.region ${var.aws_default_region}"
+-- "aws configure set aws_secret_access_key ${var.aws_secret_access_key}"
+--
+-- later, add the values from files
+-- this part is used to config the aws cli to read from secrets
+
+-- awsConfigVars :: Text
+-- awsConfigVars = [r|
+-- variable "aws_access_key_id" {
+--   type = string
+-- }
+
+-- variable "aws_secret_access_key" {
+--   type = string
+-- }
+
+-- variable "aws_default_region" {
+--   type = string
+--   default = "us-east-1"
+-- }
+
+-- variable "aws_default_format" {
+--   type = string
+--   default = "json"
+-- }
+--     |]

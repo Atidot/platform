@@ -27,6 +27,8 @@ runTerraform config dep =
         body _ = do
             (_,s) <- runStateT (iterM run dep) config
             output "example.tf" $ select $ textToLines $ renderTerraform s
+            -- output "aws_cli_config.tf" $ select $ textToLines $ renderTerraform s
+
             return ()
         fini _ = return ()
 
