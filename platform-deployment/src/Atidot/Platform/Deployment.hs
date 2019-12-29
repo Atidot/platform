@@ -50,7 +50,7 @@ hello =
 
 kiss :: DeploymentM Bool
 kiss = do
-    dbUrl  <- secret "tutorials/MyFirstTutorialSecret4"
+    dbUrl  <- secret "tutorials/MyFirstTutorialSecret"
     volume1 <- mount "data"
     b <- container "hello-world"
     return b

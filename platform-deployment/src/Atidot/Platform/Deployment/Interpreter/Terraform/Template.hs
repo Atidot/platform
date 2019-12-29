@@ -23,7 +23,7 @@ type DeviceName = String
 
 data TerraformExtendedConfig = TerraformExtendedConfig
     { _TerraformExtendedConfig_instanceExec :: [Cmd]
-    , _TerraformExtendedConfig_disks :: [(DeviceName,VolumeName)] -- start, stop, -- modify-stab
+    , _TerraformExtendedConfig_disks :: [(DeviceName,VolumeName)]
     , _TerraformExtendedConfig_secrets :: [SecretName]
     , _TerraformExtendedConfig_terraformConfig :: TerraformConfig
     , _TerraformExtendedConfig_availableDisks :: [(DeviceName,VolumeName)]
@@ -35,14 +35,13 @@ renderTerraform (TerraformExtendedConfig cmds disks secrets tconf _) =
         otherTemplates = renderProvider tconf $ defTemplates
         (devNames, diskNames) = unzip disks
         ebsVolumes = foldl1 (<>) $ zipWith3 awsEbsVolume (map (\i -> "atidot_ebs_vol_" ++ show i) [1..]) devNames diskNames
-        -- secretDeclarations = map awsSecret secrets
-        -- secretsProvsioning = renderProvider tconf $ secretsProvisioner secrets
+        secretsProvsioning = renderProvider tconf $ secretsProvisioner secrets
     in foldl1 (<>) $
       [ otherTemplates
       , ebsVolumes
-      , awsInstanceTemplate]
-  --    , secretsProvsioning
-  --    ] <> secretDeclarations
+      , awsInstanceTemplate
+      , secretsProvsioning
+      ]
 
 
 defTemplates :: String
@@ -57,7 +56,7 @@ defTemplates = foldl1 (<>)
     , awsEip
     , awsKeyPair
     , awsInstance
-    , dockerInstallProvisioner
+    , envProvisioner
     ]
 
 
@@ -75,9 +74,9 @@ resource "aws_instance" "{{instanceName}}" {
     |]
 
 
-dockerInstallProvisioner :: String
-dockerInstallProvisioner = [r|
-resource "null_resource" "docker_install" {
+envProvisioner :: String
+envProvisioner = [r|
+resource "null_resource" "env_setter" {
 
   triggers = {
     public_ip = aws_eip.{{eipName}}.id
@@ -96,7 +95,13 @@ resource "null_resource" "docker_install" {
 "sudo apt update",
 "sudo apt install docker.io -y",
 "sudo usermod -aG docker $USER",
-    ]
+"sudo apt install jq -y",
+"sudo apt install python3-pip -y",
+"pip3 install awscli --upgrade --user",
+"mkdir -p ~/.aws",
+"printf \"[default]\naws_access_key_id = ${var.aws_access_key_id}\naws_secret_access_key = ${var.aws_secret_access_key}\n\" >> ~/.aws/credentials",
+"printf \"[default]\nregion = ${var.aws_default_region}\noutput = ${var.aws_default_format}\n\" >> ~/.aws/config",
+]
   }
 
 }
@@ -110,6 +115,9 @@ resource "null_resource" "secrets_provisioner" {
   triggers = {
     public_ip = aws_eip.{{eipName}}.id
     volume_id = aws_volume_attachment.{{ebsVolumeName}}.id
+    env_setter = null_resource.env_setter.id
+    mount_and_pull = null_resource.mount_and_pull.id
+
   }
 
   connection {
@@ -121,7 +129,7 @@ resource "null_resource" "secrets_provisioner" {
 
   provisioner "remote-exec" {
     inline = [|] <>
-    unlines (map ( (\l -> l <> ",") . show . commandifySecret . replaceIllegalTerraformName) secrets)
+    unlines (map commandifySecret secrets)
     <> [r|]
   }
 
@@ -129,7 +137,11 @@ resource "null_resource" "secrets_provisioner" {
     |]
     where
       commandifySecret :: String -> String
-      commandifySecret secret = [r| printf "${aws_secretsmanager_secret_version.|] <> secret <> [r|-value.secret_string}\n" >> ~/.bashrc |]
+      commandifySecret secret = [r|
+"printf \"export SECRET=\" >> ~/.bashrc",
+"aws secretsmanager get-secret-value --secret-id |] <> secret <> [r| | jq '.SecretString'  >> ~/.bashrc",
+"printf \"\n\">> ~/.bashrc",
+|]
 
 
 nullRemoteProvsioner :: [Cmd] -> [SecretName] -> String
@@ -139,7 +151,7 @@ resource "null_resource" "mount_and_pull" {
   triggers = {
     public_ip = aws_eip.{{eipName}}.id
     volume_id = aws_volume_attachment.{{ebsVolumeName}}.id
-    docker_install = null_resource.docker_install.id
+    env_setter = null_resource.env_setter.id
 
   }
 
@@ -186,59 +198,27 @@ resource "aws_volume_attachment" "{{name}}" {
 }
   |]
 
-awsSecret :: SecretName -> Text
-awsSecret name =
-    let ctx :: GVal (Run SourcePos (Writer Text) Text)
-        ctx = dict $ map (\(a,b) -> a ~> b)
-            [ ("name"              , name              )
-            , ("legalName"         , replaceIllegalTerraformName name)
-            ]
-    in easyRender ctx $ toTemplate template
-  where
-    template = [r|
-resource "aws_secretsmanager_secret" "{{legalName}}" {
-  name = "{{name}}"
-}
 
-resource "aws_secretsmanager_secret_version" "{{legalName}}-value" {
-  secret_id = aws_secretsmanager_secret.{{legalName}}.id
-}
-# can be accessed by calling:               aws_secretsmanager_secret_version.{{legalName}}-value.secret_string
-# can be encoded and then to access values: jsondecode(aws_secretsmanager_secret_version.{{legalName}}-value.secret_string)["key1"]
-|]
-
-replaceIllegalTerraformName =
-    let repl '/' = '_'
-        repl  c   = c
-    in map repl
-
---
--- "sudo apt install awscli -y",
--- "aws configure set aws_access_key_id ${var.aws_access_key_id}"
--- "aws configure set aws_secret_access_key ${var.aws_secret_access_key}"
--- "aws configure set default.region ${var.aws_default_region}"
--- "aws configure set aws_secret_access_key ${var.aws_secret_access_key}"
---
 -- later, add the values from files
 -- this part is used to config the aws cli to read from secrets
 
--- awsConfigVars :: Text
--- awsConfigVars = [r|
--- variable "aws_access_key_id" {
---   type = string
--- }
+awsConfigVars :: Text
+awsConfigVars = [r|
+variable "aws_access_key_id" {
+  type = string
+}
 
--- variable "aws_secret_access_key" {
---   type = string
--- }
+variable "aws_secret_access_key" {
+  type = string
+}
 
--- variable "aws_default_region" {
---   type = string
---   default = "us-east-1"
--- }
+variable "aws_default_region" {
+  type = string
+  default = "us-east-1"
+}
 
--- variable "aws_default_format" {
---   type = string
---   default = "json"
--- }
---     |]
+variable "aws_default_format" {
+  type = string
+  default = "json"
+}
+    |]
