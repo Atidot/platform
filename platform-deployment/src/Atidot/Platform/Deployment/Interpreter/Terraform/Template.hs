@@ -2,6 +2,7 @@
 module Atidot.Platform.Deployment.Interpreter.Terraform.Template where
 
 import "text"           Data.Text (Text)
+import "base"           Data.Char
 import "ginger"         Text.Ginger
 import "raw-strings-qq" Text.RawString.QQ
 import "mtl"            Control.Monad.Writer (Writer)
@@ -136,10 +137,14 @@ resource "null_resource" "secrets_provisioner" {
 }
     |]
     where
+      replaceInvalidChars =
+        let repl '/' = '_'
+            repl  c   = c
+        in map repl
       commandifySecret :: String -> String
       commandifySecret secret = [r|
-"printf \"export SECRET=\" >> ~/.bashrc",
-"aws secretsmanager get-secret-value --secret-id |] <> secret <> [r| | jq '.SecretString'  >> ~/.bashrc",
+"printf \"export |] <> (map toUpper $ replaceInvalidChars secret) <> [r|=\" >> ~/.bashrc",
+"/home/ubuntu/.local/bin/aws secretsmanager get-secret-value --secret-id |] <> secret <> [r| | jq '.SecretString'  >> ~/.bashrc",
 "printf \"\n\">> ~/.bashrc",
 |]
 

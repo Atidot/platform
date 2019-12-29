@@ -28,7 +28,7 @@ runTerraform config dep =
             (_,s) <- runStateT (iterM run dep) config
             output "example.tf" $ select $ textToLines $ renderTerraform s
             output "aws_cli_config.tf" $ select $ textToLines awsConfigVars
-
+            procs "terraform" ["init"] stdin
             return ()
         fini _ = return ()
 
