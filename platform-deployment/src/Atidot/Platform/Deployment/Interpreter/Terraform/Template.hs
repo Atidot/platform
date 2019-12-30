@@ -6,7 +6,6 @@ import "base"           Data.Char
 import "ginger"         Text.Ginger
 import "raw-strings-qq" Text.RawString.QQ
 import "mtl"            Control.Monad.Writer (Writer)
-import "mtl"            Control.Monad.Identity (Identity(..))
 import "data-default" Data.Default
 import qualified "containers" Data.Map as M
 import Atidot.Platform.Deployment.Interpreter.AMI.Types hiding (DiskName,SecretName,VolumeName)
@@ -35,12 +34,12 @@ data TerraformExtendedConfig = TerraformExtendedConfig
     }
 
 renderTerraform :: TerraformExtendedConfig -> Text
-renderTerraform (TerraformExtendedConfig prepCmds cmds disks secrets dockers tconf _) =
+renderTerraform (TerraformExtendedConfig prepCmds cmds disks secrets _ tconf _) =
     let prepProvisioner = renderProvider tconf $ nullRemoteProvsioner prepCmds
         execProvisioner' = renderProvider tconf $ execProvisioner cmds
         otherTemplates = renderProvider tconf $ defTemplates
         (devNames, diskNames) = unzip disks
-        ebsVolumes = foldl1 (<>) $ zipWith3 awsEbsVolume (map (\i -> "atidot_ebs_vol_" ++ show i) [1..]) devNames diskNames
+        ebsVolumes = foldl1 (<>) $ zipWith3 awsEbsVolume (map (\i -> "atidot_ebs_vol_" ++ show i) ([1..] :: [Int])) devNames diskNames
         secretsProvsioning = renderProvider tconf $ secretsProvisioner secrets
     in foldl1 (<>) $
       [ otherTemplates
@@ -169,14 +168,14 @@ resource "null_resource" "mount_and_pull" {
     private_key = file("~/.ssh/{{keyName}}")
   }
     |] <>
-    genExec cmds
+    genExec
   <> [r|
 }
     |]
     where
 
-        genExec :: [Cmd] -> String
-        genExec cmds = [r|
+        genExec :: String
+        genExec = [r|
   provisioner "remote-exec" {
     inline = [
 |] <> unlines ( map ((\l -> l <> ","). show) cmds) <>
@@ -204,14 +203,14 @@ resource "null_resource" "executor" {
     private_key = file("~/.ssh/{{keyName}}")
   }
     |] <>
-    genExec cmds
+    genExec
   <> [r|
 }
     |]
     where
 
-        genExec :: [Cmd] -> String
-        genExec cmds = [r|
+        genExec :: String
+        genExec = [r|
   provisioner "remote-exec" {
     inline = [
 |] <> unlines ( map ((\l -> l <> ","). show) cmds) <>
@@ -266,10 +265,11 @@ variable "aws_default_format" {
 }
     |]
 
+replaceInvalidChars :: [Char] -> [Char]
 replaceInvalidChars =
     let repl '/' = '_'
         repl  c   = c
     in map repl
 
-
+secretifyName :: [Char] -> [Char]
 secretifyName = map toUpper . replaceInvalidChars

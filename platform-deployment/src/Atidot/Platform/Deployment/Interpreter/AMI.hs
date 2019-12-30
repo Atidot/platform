@@ -1,13 +1,11 @@
 module Atidot.Platform.Deployment.Interpreter.AMI where
 
 import                        Prelude hiding (FilePath)
-import           "base"       Data.List
 import           "text"       Data.Text (Text)
 import qualified "text"       Data.Text as T
-import qualified "text"       Data.Text.IO as T
 import           "free"       Control.Monad.Free
 import           "mtl"        Control.Monad.State
-import           "exceptions" Control.Monad.Catch (MonadMask, bracket)
+import           "exceptions" Control.Monad.Catch (bracket)
 import           "turtle"     Turtle
 import           "uuid"       Data.UUID.V4 (nextRandom)
 import           "directory"  System.Directory (doesFileExist)
@@ -44,11 +42,11 @@ runAMI config dep =
             sshW publicDns ["mkdir",rSecretsDir]
             return publicDns
         fini :: Text -> IO ()
-        fini publicDns = do
+        fini _publicDns = do
             -- save ami
-            showOutput <- reduceShell $ inproc "terraform" ["show"] stdin
-            let instanceId = getInstanceId showOutput
-                amiName = instanceId <> "-ami"
+            --showOutput <- reduceShell $ inproc "terraform" ["show"] stdin
+            --let instanceId = getInstanceId showOutput
+                --amiName = instanceId <> "-ami"
             --procs "aws" ["ec2", "create-image", "--instance-id", instanceId, "--name", amiName] stdin
 
           -- destroy all resources
@@ -72,17 +70,17 @@ runAMI config dep =
             isFile <- liftIO $ doesFileExist secretData
             if isFile then do
                 -- path <- copy file into remote location
-                conf <- get
+                -- conf <- get
                 nuid <- liftIO nextRandom
                 scpW publicDns (T.pack secretData) rSecretsDir
-                let fname = encodeString $ fromText rSecretsDir </> filename (decodeString secretData)
+                --let fname = encodeString $ fromText rSecretsDir </> filename (decodeString secretData)
                 -- add path to state
-                    conf' = conf{ _AMIConfig_secrets = _AMIConfig_secrets conf <> [(nuid,(secretData,Just fname,Nothing))]}
+                --    conf' = conf{ _AMIConfig_secrets = _AMIConfig_secrets conf <> [(nuid,(secretData,Just fname,Nothing))]}
                 next $ T.pack $ show nuid
             else do
                 conf <- get
                 nuid <- liftIO nextRandom
-                -- store directly in the state
+                -- store directly in the st ate
                 let conf' = conf{ _AMIConfig_secrets = _AMIConfig_secrets conf <> [(nuid,(secretData,Nothing,Nothing))]}
                 put conf'
                 next $ T.pack $ show nuid
@@ -97,8 +95,12 @@ runAMI config dep =
                 newMounts = (<> [(volume,(disk,containerName))]) $ filter ((/= volume) . fst) $ _AMIConfig_mounts conf
             put $ conf{_AMIConfig_mounts = newMounts}
             next volume
+        run _ (AttachSecret _ _ next) = next
+        run _ (AttachVolume _ _ next) = next
+        run _ (Execute _ _ _ next) = next
 
 sshW :: Text -> [Text] -> IO ()
 sshW pdns cmd = procs "ssh" (["ubuntu@"<>pdns,"-o","StrictHostKeyChecking=no","-i","~/.ssh/terraform-keys2"] <> cmd) stdin
 
+scpW :: MonadIO io => Text -> Text -> Text -> io ()
 scpW pdns lcl rmt = procs "scp" ["-o","StrictHostKeyChecking=no","-i","~/.ssh/terraform-keys2",lcl, "ubuntu" <> "@" <> pdns <> ":" <> rmt] stdin

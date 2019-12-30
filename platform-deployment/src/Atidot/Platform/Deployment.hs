@@ -4,19 +4,10 @@
 
 module Atidot.Platform.Deployment where
 
-import "base"                   Control.Monad(void)
-import "base"                   Data.Traversable(for)
-import "base"                   Data.Monoid
 import "base"                   Data.Typeable
 import "free"                   Control.Monad.Free
 import "free"                   Control.Monad.Free.TH
 import "text"                   Data.Text(Text)
-import "uuid"                   Data.UUID
-
--- import qualified "containers"   Data.Map as M
---import qualified "text"         Data.Text as T
-
-someFunc = putStrLn "hello"
 
 data Volume = Volume FilePath
 data Disk = Disk FilePath
@@ -54,8 +45,8 @@ hello =
 
 kiss :: DeploymentM Bool
 kiss = do
-    dbUrl  <- secret "tutorials/MyFirstTutorialSecret"
-    volume1 <- mount "data"
+    _dbUrl  <- secret "tutorials/MyFirstTutorialSecret"
+    _volume1 <- mount "data"
     b <- container "hello-world"
     execute [] "hello-world" []
     return b
@@ -63,23 +54,23 @@ kiss = do
 
 nsss :: DeploymentM Bool
 nsss = do
-    secret  <- secret "tutorials/MyFirstTutorialSecret"
+    s <- secret "tutorials/MyFirstTutorialSecret"
     dir <- mount "data"
     b <- container "hello-world"
-    attachSecret secret "hello-world"
+    attachSecret s "hello-world"
     attachVolume dir "hello-world"
     execute [] "hello-world" []
     return b
 
 pacificLife :: DeploymentM Bool
 pacificLife = do
-    dbUrl  <- secret "DB_URL"
-    dbPass <- secret "DB_PASSWORD"
-    volume1 <- mount "bli/bloo"
-    volume2 <- mount "bli/bliiii/oooo"
-    b <- container "atidot/undins"
-    b <- container "atidot/undins2"
-    return b
+    _dbUrl  <- secret "DB_URL"
+    _dbPass <- secret "DB_PASSWORD"
+    _volume1 <- mount "bli/bloo"
+    _volume2 <- mount "bli/bliiii/oooo"
+    _b <- container "atidot/undins"
+    b2 <- container "atidot/undins2"
+    return b2
 
 
 

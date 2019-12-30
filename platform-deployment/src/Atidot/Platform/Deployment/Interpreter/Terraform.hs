@@ -1,19 +1,17 @@
 {-# LANGUAGE FlexibleContexts #-}
 module Atidot.Platform.Deployment.Interpreter.Terraform where
 
-import           "text"       Data.Text (Text)
 import qualified "text"       Data.Text as T
 import           "base"       Data.Maybe
-import           "exceptions" Control.Monad.Catch (MonadMask, bracket)
+import           "exceptions" Control.Monad.Catch (bracket)
 import           "free"       Control.Monad.Free
 import           "mtl"        Control.Monad.State
-import           "uuid"       Data.UUID.V4 (nextRandom)
-import           "turtle"     Turtle
+import           "turtle"     Turtle hiding (x, s, d)
 import qualified "containers" Data.Map as M
 
 import       Atidot.Platform.Deployment.Interpreter.Utils
 import       Atidot.Platform.Deployment.Interpreter.Terraform.Template
-import       Atidot.Platform.Deployment
+import       Atidot.Platform.Deployment hiding (VolumeName, SecretName, Name, FolderDir)
 
 
 runTerraform :: TerraformExtendedConfig -> DeploymentM a -> IO ()
@@ -36,7 +34,6 @@ runTerraform config dep =
 
         run :: Deployment (StateT TerraformExtendedConfig IO a) -> StateT TerraformExtendedConfig IO a
         run (Container containerName next) = do
-            conf <- get
             updateDockers $ T.unpack containerName
             updatePrep ["docker","pull", T.unpack containerName]
             next True
@@ -69,27 +66,35 @@ runTerraform config dep =
             updateExec cmd
             next
 
-
+updatePrep :: (MonadState TerraformExtendedConfig m, Foldable t) => t [Char] -> m ()
 updatePrep cmd = modify $ \s -> s{ _TerraformExtendedConfig_instancePrep = _TerraformExtendedConfig_instancePrep s <> [foldl1 (\x y -> x <> " " <> y) cmd]}
 
+updateExec :: (MonadState TerraformExtendedConfig m, Foldable t) => t [Char] -> m ()
 updateExec cmd = modify $ \s -> s{ _TerraformExtendedConfig_instanceExec = _TerraformExtendedConfig_instanceExec s <> [foldl1 (\x y -> x <> " " <> y) cmd]}
 
+attachDockerFolder :: MonadState TerraformExtendedConfig m => Name -> FolderDir -> m ()
 attachDockerFolder name folderDir = modify $ \s ->  case M.lookup name (_TerraformExtendedConfig_dockers s) of
     Nothing -> error $ "attachDockerFolder: docker '" ++ show name ++ "' not found"
     Just _ -> s{ _TerraformExtendedConfig_dockers = M.insertWith (\a b -> (fst a ++ fst b,snd a ++ snd b)) name ([],[folderDir]) (_TerraformExtendedConfig_dockers s)}
 
-attachDockerSecret name secret = modify $ \s ->  case M.lookup name (_TerraformExtendedConfig_dockers s) of
+attachDockerSecret :: MonadState TerraformExtendedConfig m => Name -> SecretName -> m ()
+attachDockerSecret name sec = modify $ \s ->  case M.lookup name (_TerraformExtendedConfig_dockers s) of
     Nothing -> error $ "attachDockerSecret: docker '" ++ show name ++ "' not found"
-    Just _ -> s{ _TerraformExtendedConfig_dockers = M.insertWith (\a b -> (fst a ++ fst b,snd a ++ snd b)) name ([secret],[]) (_TerraformExtendedConfig_dockers s)}
+    Just _ -> s{ _TerraformExtendedConfig_dockers = M.insertWith (\a b -> (fst a ++ fst b,snd a ++ snd b)) name ([sec],[]) (_TerraformExtendedConfig_dockers s)}
 
+updateDockers :: MonadState TerraformExtendedConfig m => Name -> m ()
 updateDockers name = modify $ \s -> if M.member name (_TerraformExtendedConfig_dockers s)
     then s
     else s{ _TerraformExtendedConfig_dockers = M.insert name ([],[]) (_TerraformExtendedConfig_dockers s)}
 
+addDisk :: MonadState TerraformExtendedConfig m => DeviceName -> VolumeName -> m ()
 addDisk diskName volume = modify $ \s -> s{ _TerraformExtendedConfig_disks = _TerraformExtendedConfig_disks s <> [(diskName,volume)]}
 
+
+addSecret :: MonadState TerraformExtendedConfig m => SecretName -> m ()
 addSecret secretName = modify $ \s -> s{ _TerraformExtendedConfig_secrets = _TerraformExtendedConfig_secrets s <> [secretName]}
 
+getNextDisk :: StateT TerraformExtendedConfig IO (DeviceName, VolumeName)
 getNextDisk = do
     conf <- get
     let disks = _TerraformExtendedConfig_availableDisks conf

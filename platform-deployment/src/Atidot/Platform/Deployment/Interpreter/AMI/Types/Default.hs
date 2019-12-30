@@ -1,3 +1,4 @@
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 module Atidot.Platform.Deployment.Interpreter.AMI.Types.Default where
 
 import "data-default" Data.Default

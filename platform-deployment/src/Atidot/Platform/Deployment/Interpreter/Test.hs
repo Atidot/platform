@@ -7,7 +7,6 @@ import "free"     Control.Monad.Free
 -- import qualified Data.Map as M
 import            Atidot.Platform.Deployment
 import "mtl"      Control.Monad.State
-import "uuid"     Data.UUID.V4 (nextRandom)
 
 data TestConfig =
     TestConfig
@@ -19,12 +18,15 @@ runTest config dep = do
     return ()
     where
         run :: Deployment (StateT TestConfig IO a) -> StateT TestConfig IO a
-        run (Container containerName next) = do
+        run (Container _containerName next) = do
             liftIO $ putStrLn "some container cmd"
             next True
-        run (Secret secretData next) = do
+        run (Secret _secretData next) = do
             liftIO $ putStrLn "some secret thingy"
             next ""
-        run (Mount disk next) = do
+        run (Mount _disk next) = do
             liftIO $ putStrLn "some storage mount"
             next "some volumn mapping"
+        run (AttachSecret _ _ next) = next
+        run (AttachVolume _ _ next) = next
+        run (Execute _ _ _ next) = next

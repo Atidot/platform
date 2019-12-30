@@ -14,11 +14,13 @@ rSecretsDir = "/home/ubuntu/.secrets"
 reduceShell :: Shell Line -> IO Text
 reduceShell =  reduce $ Fold (<>) "" lineToText
 
+getPublicDns :: Text -> Text
 getPublicDns = T.takeWhile (/= '"')
              . T.tail . T.dropWhile (/= '"')
              . snd
              . T.breakOn "public_dns"
 
+getInstanceId :: Text -> Text
 getInstanceId = T.takeWhile (/= '"')
               . T.tail
               . T.dropWhile (/= '"')

@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: a3d0747a5c911022a1b096cd519759f97687f8eb5983b62b4b332cc86aec4da0
+-- hash: 61e356af67999cee1223314d87fdfdd592f960368b933db1b8f345df60667e82
 
 name:           platform-deployment
 version:        0.1.0.0
@@ -42,6 +42,7 @@ library
   hs-source-dirs:
       src
   default-extensions: PackageImports OverloadedStrings ScopedTypeVariables
+  ghc-options: -Wall -Werror
   build-depends:
       aeson
     , base >=4.7 && <5
