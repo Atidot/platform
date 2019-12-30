@@ -8,11 +8,12 @@ import "raw-strings-qq" Text.RawString.QQ
 import "mtl"            Control.Monad.Writer (Writer)
 import "mtl"            Control.Monad.Identity (Identity(..))
 import "data-default" Data.Default
+import qualified "containers" Data.Map as M
 import Atidot.Platform.Deployment.Interpreter.AMI.Types hiding (DiskName,SecretName,VolumeName)
 import Atidot.Platform.Deployment.Interpreter.AMI.Template hiding (awsInstance,allTemplates, awsEbsVolume)
 
 instance Default TerraformExtendedConfig where
-    def = TerraformExtendedConfig [] [] [] def $ zip ["xvdh","sdf","sdg","sdh","sdj"] ["vol-01ac704e80ba48949"]
+    def = TerraformExtendedConfig [] [] [] M.empty def $ zip ["xvdh","sdf","sdg","sdh","sdj"] ["vol-01ac704e80ba48949"]
 
 type Cmd = String
 type SecretName = String
@@ -20,18 +21,20 @@ type DiskName = String
 type VolumeName = String
 type Name = String
 type DeviceName = String
+type FolderDir = String
 
 
 data TerraformExtendedConfig = TerraformExtendedConfig
     { _TerraformExtendedConfig_instanceExec :: [Cmd]
     , _TerraformExtendedConfig_disks :: [(DeviceName,VolumeName)]
     , _TerraformExtendedConfig_secrets :: [SecretName]
+    , _TerraformExtendedConfig_dockers :: M.Map Name ([SecretName],[FolderDir])
     , _TerraformExtendedConfig_terraformConfig :: TerraformConfig
     , _TerraformExtendedConfig_availableDisks :: [(DeviceName,VolumeName)]
     }
 
 renderTerraform :: TerraformExtendedConfig -> Text
-renderTerraform (TerraformExtendedConfig cmds disks secrets tconf _) =
+renderTerraform (TerraformExtendedConfig cmds disks secrets dockers tconf _) =
     let awsInstanceTemplate = renderProvider tconf $ nullRemoteProvsioner cmds []
         otherTemplates = renderProvider tconf $ defTemplates
         (devNames, diskNames) = unzip disks

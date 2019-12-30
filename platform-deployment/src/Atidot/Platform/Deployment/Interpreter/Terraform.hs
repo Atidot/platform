@@ -8,6 +8,8 @@ import           "free"       Control.Monad.Free
 import           "mtl"        Control.Monad.State
 import           "uuid"       Data.UUID.V4 (nextRandom)
 import           "turtle"     Turtle
+import           "base"       Control.Arrow
+import qualified "containers" Data.Map as M
 
 import       Atidot.Platform.Deployment.Interpreter.Utils
 import       Atidot.Platform.Deployment.Interpreter.Terraform.Template
@@ -35,6 +37,7 @@ runTerraform config dep =
         run :: Deployment (StateT TerraformExtendedConfig IO a) -> StateT TerraformExtendedConfig IO a
         run (Container containerName next) = do
             conf <- get
+            updateDockers $ T.unpack containerName
             updateExec ["docker","pull", T.unpack containerName]
             next True
         run (Secret secretName next) = do
@@ -50,9 +53,27 @@ runTerraform config dep =
             updateExec ["echo", "/dev/" <> devMapping, folderDir, "xfs", "defaults,nofail",  "0",  "2", "|", "sudo", "tee", "-a", "/etc/fstab"]
             updateExec ["sudo","cat","/etc/fstab"]
             next $ T.pack folderDir
+        run (AttachSecret secretName name next) = do
+            attachDockerSecret (T.unpack name) (T.unpack secretName)
+            next
+        run (AttachVolume folderDir name next) = do
+            attachDockerFolder (T.unpack name) (T.unpack folderDir)
+            next
 
 
 updateExec cmd = modify $ \s -> s{ _TerraformExtendedConfig_instanceExec = _TerraformExtendedConfig_instanceExec s <> [foldl1 (\x y -> x <> " " <> y) cmd]}
+
+attachDockerFolder name folderDir = modify $ \s ->  case M.lookup name (_TerraformExtendedConfig_dockers s) of
+    Nothing -> error $ "attachDockerFolder: docker '" ++ show name ++ "' not found"
+    Just _ -> s{ _TerraformExtendedConfig_dockers = M.insertWith (\a b -> (fst a ++ fst b,snd a ++ snd b)) name ([],[folderDir]) (_TerraformExtendedConfig_dockers s)}
+
+attachDockerSecret name secret = modify $ \s ->  case M.lookup name (_TerraformExtendedConfig_dockers s) of
+    Nothing -> error $ "attachDockerSecret: docker '" ++ show name ++ "' not found"
+    Just _ -> s{ _TerraformExtendedConfig_dockers = M.insertWith (\a b -> (fst a ++ fst b,snd a ++ snd b)) name ([secret],[]) (_TerraformExtendedConfig_dockers s)}
+
+updateDockers name = modify $ \s -> if M.member name (_TerraformExtendedConfig_dockers s)
+    then s
+    else s{ _TerraformExtendedConfig_dockers = M.insert name ([],[]) (_TerraformExtendedConfig_dockers s)}
 
 addDisk diskName volume = modify $ \s -> s{ _TerraformExtendedConfig_disks = _TerraformExtendedConfig_disks s <> [(diskName,volume)]}
 

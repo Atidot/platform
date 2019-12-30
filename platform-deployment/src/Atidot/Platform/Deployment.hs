@@ -27,16 +27,17 @@ type SecretValue = String
 type SecretName = Text
 type DiskName = Text
 type VolumeName = Text
+type FolderDir = Text
 
 data Deployment a
     -- resource declarations
     = Container Name (Bool -> a) -- bool
     | Secret SecretValue (SecretName -> a)
     | Mount DiskName (VolumeName -> a)
-    | Config FilePath (FilePath -> a)
-    -- resouce attachments
-    | AttachSecret SecretName Name (Bool -> a)
-    | AttachVolume VolumeName Name (Bool -> a)
+    -- resource attachments
+    | AttachSecret SecretName Name a
+    | AttachVolume FolderDir Name a
+
 
     deriving (Typeable, Functor)
 
@@ -54,8 +55,6 @@ kiss = do
     volume1 <- mount "data"
     b <- container "hello-world"
     return b
-
-
 
 pacificLife :: DeploymentM Bool
 pacificLife = do
