@@ -28,6 +28,7 @@ type SecretName = Text
 type DiskName = Text
 type VolumeName = Text
 type FolderDir = Text
+type Arg = Text
 
 data Deployment a
     -- resource declarations
@@ -37,6 +38,8 @@ data Deployment a
     -- resource attachments
     | AttachSecret SecretName Name a
     | AttachVolume FolderDir Name a
+    -- execution
+    | Execute Name [Arg] a
 
 
     deriving (Typeable, Functor)

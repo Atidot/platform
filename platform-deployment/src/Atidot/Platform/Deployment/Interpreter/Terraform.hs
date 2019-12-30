@@ -3,12 +3,12 @@ module Atidot.Platform.Deployment.Interpreter.Terraform where
 
 import           "text"       Data.Text (Text)
 import qualified "text"       Data.Text as T
+import           "base"       Data.Maybe
 import           "exceptions" Control.Monad.Catch (MonadMask, bracket)
 import           "free"       Control.Monad.Free
 import           "mtl"        Control.Monad.State
 import           "uuid"       Data.UUID.V4 (nextRandom)
 import           "turtle"     Turtle
-import           "base"       Control.Arrow
 import qualified "containers" Data.Map as M
 
 import       Atidot.Platform.Deployment.Interpreter.Utils
@@ -59,6 +59,16 @@ runTerraform config dep =
         run (AttachVolume folderDir name next) = do
             attachDockerFolder (T.unpack name) (T.unpack folderDir)
             next
+        run (Execute name _ next) = do
+            conf <- get
+            let name' = T.unpack name
+                (secrets,dirs) = fromMaybe ([],[]) $ M.lookup name' $ _TerraformExtendedConfig_dockers conf
+                dirs' = map (\d -> ["-v",d <> ":" <> d]) dirs
+                secrets' = map (\s -> ["-e",s <> "=$" <> s]) secrets
+                cmd = ["docker","run","-d","-it"] ++ concat dirs' ++ concat secrets' ++ [name']
+            updateExec cmd
+            next
+
 
 
 updateExec cmd = modify $ \s -> s{ _TerraformExtendedConfig_instanceExec = _TerraformExtendedConfig_instanceExec s <> [foldl1 (\x y -> x <> " " <> y) cmd]}
