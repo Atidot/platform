@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 22e91168a49a1f34cf41d428acf4a7cab9486e020de46fed26c7ef60e4ab88d8
+-- hash: a3d0747a5c911022a1b096cd519759f97687f8eb5983b62b4b332cc86aec4da0
 
 name:           platform-deployment
 version:        0.1.0.0
@@ -52,6 +52,7 @@ library
     , free
     , ginger
     , mtl
+    , optparse-generic
     , raw-strings-qq
     , text
     , turtle
@@ -76,6 +77,7 @@ executable platform-deployment-exe
     , free
     , ginger
     , mtl
+    , optparse-generic
     , platform-deployment
     , raw-strings-qq
     , text
@@ -102,6 +104,7 @@ test-suite platform-deployment-test
     , free
     , ginger
     , mtl
+    , optparse-generic
     , platform-deployment
     , raw-strings-qq
     , text
