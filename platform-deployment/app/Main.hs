@@ -6,4 +6,4 @@ import                Atidot.Platform.Deployment.Interpreter.Terraform
 import                Atidot.Platform.Deployment.Interpreter.AMI.Types
 
 main :: IO ()
-main = runTerraform def kiss
+main = runTerraform def nsss --kiss

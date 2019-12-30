@@ -38,20 +38,20 @@ runTerraform config dep =
         run (Container containerName next) = do
             conf <- get
             updateDockers $ T.unpack containerName
-            updateExec ["docker","pull", T.unpack containerName]
+            updatePrep ["docker","pull", T.unpack containerName]
             next True
         run (Secret secretName next) = do
             -- pull secrets from aws vault
             addSecret secretName
-            next $ T.pack secretName
+            next $ T.pack $ secretifyName secretName
         run (Mount folderName next) = do
             (devMapping, volId) <- getNextDisk
             addDisk devMapping volId
             let folderDir = "/" <> T.unpack folderName
-            updateExec ["sudo","mkdir","-p",folderDir]
-            updateExec ["sudo","mount", "/dev/" <> devMapping, folderDir]
-            updateExec ["echo", "/dev/" <> devMapping, folderDir, "xfs", "defaults,nofail",  "0",  "2", "|", "sudo", "tee", "-a", "/etc/fstab"]
-            updateExec ["sudo","cat","/etc/fstab"]
+            updatePrep ["sudo","mkdir","-p",folderDir]
+            updatePrep ["sudo","mount", "/dev/" <> devMapping, folderDir]
+            updatePrep ["echo", "/dev/" <> devMapping, folderDir, "xfs", "defaults,nofail",  "0",  "2", "|", "sudo", "tee", "-a", "/etc/fstab"]
+            updatePrep ["sudo","cat","/etc/fstab"]
             next $ T.pack folderDir
         run (AttachSecret secretName name next) = do
             attachDockerSecret (T.unpack name) (T.unpack secretName)
@@ -59,17 +59,18 @@ runTerraform config dep =
         run (AttachVolume folderDir name next) = do
             attachDockerFolder (T.unpack name) (T.unpack folderDir)
             next
-        run (Execute name _ next) = do
+        run (Execute containerEngineArgs name containerArgs next) = do
             conf <- get
             let name' = T.unpack name
                 (secrets,dirs) = fromMaybe ([],[]) $ M.lookup name' $ _TerraformExtendedConfig_dockers conf
                 dirs' = map (\d -> ["-v",d <> ":" <> d]) dirs
                 secrets' = map (\s -> ["-e",s <> "=$" <> s]) secrets
-                cmd = ["docker","run","-d","-it"] ++ concat dirs' ++ concat secrets' ++ [name']
+                cmd = ["docker","run"] ++ map T.unpack containerEngineArgs ++ concat dirs' ++ concat secrets' ++ [name'] ++ map T.unpack containerArgs
             updateExec cmd
             next
 
 
+updatePrep cmd = modify $ \s -> s{ _TerraformExtendedConfig_instancePrep = _TerraformExtendedConfig_instancePrep s <> [foldl1 (\x y -> x <> " " <> y) cmd]}
 
 updateExec cmd = modify $ \s -> s{ _TerraformExtendedConfig_instanceExec = _TerraformExtendedConfig_instanceExec s <> [foldl1 (\x y -> x <> " " <> y) cmd]}
 

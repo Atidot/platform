@@ -13,7 +13,7 @@ import Atidot.Platform.Deployment.Interpreter.AMI.Types hiding (DiskName,SecretN
 import Atidot.Platform.Deployment.Interpreter.AMI.Template hiding (awsInstance,allTemplates, awsEbsVolume)
 
 instance Default TerraformExtendedConfig where
-    def = TerraformExtendedConfig [] [] [] M.empty def $ zip ["xvdh","sdf","sdg","sdh","sdj"] ["vol-01ac704e80ba48949"]
+    def = TerraformExtendedConfig [] [] [] [] M.empty def $ zip ["xvdh","sdf","sdg","sdh","sdj"] ["vol-01ac704e80ba48949"]
 
 type Cmd = String
 type SecretName = String
@@ -25,7 +25,8 @@ type FolderDir = String
 
 
 data TerraformExtendedConfig = TerraformExtendedConfig
-    { _TerraformExtendedConfig_instanceExec :: [Cmd]
+    { _TerraformExtendedConfig_instancePrep :: [Cmd]
+    , _TerraformExtendedConfig_instanceExec :: [Cmd]
     , _TerraformExtendedConfig_disks :: [(DeviceName,VolumeName)]
     , _TerraformExtendedConfig_secrets :: [SecretName]
     , _TerraformExtendedConfig_dockers :: M.Map Name ([SecretName],[FolderDir])
@@ -34,8 +35,9 @@ data TerraformExtendedConfig = TerraformExtendedConfig
     }
 
 renderTerraform :: TerraformExtendedConfig -> Text
-renderTerraform (TerraformExtendedConfig cmds disks secrets dockers tconf _) =
-    let awsInstanceTemplate = renderProvider tconf $ nullRemoteProvsioner cmds []
+renderTerraform (TerraformExtendedConfig prepCmds cmds disks secrets dockers tconf _) =
+    let prepProvisioner = renderProvider tconf $ nullRemoteProvsioner prepCmds
+        execProvisioner' = renderProvider tconf $ execProvisioner cmds
         otherTemplates = renderProvider tconf $ defTemplates
         (devNames, diskNames) = unzip disks
         ebsVolumes = foldl1 (<>) $ zipWith3 awsEbsVolume (map (\i -> "atidot_ebs_vol_" ++ show i) [1..]) devNames diskNames
@@ -43,8 +45,9 @@ renderTerraform (TerraformExtendedConfig cmds disks secrets dockers tconf _) =
     in foldl1 (<>) $
       [ otherTemplates
       , ebsVolumes
-      , awsInstanceTemplate
+      , prepProvisioner
       , secretsProvsioning
+      , execProvisioner'
       ]
 
 
@@ -140,20 +143,16 @@ resource "null_resource" "secrets_provisioner" {
 }
     |]
     where
-      replaceInvalidChars =
-        let repl '/' = '_'
-            repl  c   = c
-        in map repl
       commandifySecret :: String -> String
       commandifySecret secret = [r|
-"printf \"export |] <> (map toUpper $ replaceInvalidChars secret) <> [r|=\" >> ~/.bashrc",
+"printf \"export |] <> secretifyName secret <> [r|=\" >> ~/.bashrc",
 "/home/ubuntu/.local/bin/aws secretsmanager get-secret-value --secret-id |] <> secret <> [r| | jq '.SecretString'  >> ~/.bashrc",
 "printf \"\n\">> ~/.bashrc",
 |]
 
 
-nullRemoteProvsioner :: [Cmd] -> [SecretName] -> String
-nullRemoteProvsioner cmds _ = [r|
+nullRemoteProvsioner :: [Cmd] -> String
+nullRemoteProvsioner cmds = [r|
 resource "null_resource" "mount_and_pull" {
 
   triggers = {
@@ -184,6 +183,42 @@ resource "null_resource" "mount_and_pull" {
             [r|    ]
   }
             |]
+
+execProvisioner :: [Cmd] -> String
+execProvisioner cmds = [r|
+resource "null_resource" "executor" {
+
+  triggers = {
+    public_ip = aws_eip.{{eipName}}.id
+    volume_id = aws_volume_attachment.{{ebsVolumeName}}.id
+    env_setter = null_resource.env_setter.id
+    secrets_provisioner = null_resource.secrets_provisioner.id
+
+
+  }
+
+  connection {
+    user        = "ubuntu"
+    host        = aws_eip.{{eipName}}.public_ip
+    agent       = false
+    private_key = file("~/.ssh/{{keyName}}")
+  }
+    |] <>
+    genExec cmds
+  <> [r|
+}
+    |]
+    where
+
+        genExec :: [Cmd] -> String
+        genExec cmds = [r|
+  provisioner "remote-exec" {
+    inline = [
+|] <> unlines ( map ((\l -> l <> ","). show) cmds) <>
+            [r|    ]
+  }
+            |]
+
 
 
 awsEbsVolume :: Name -> DeviceName -> VolumeName -> Text
@@ -230,3 +265,11 @@ variable "aws_default_format" {
   default = "json"
 }
     |]
+
+replaceInvalidChars =
+    let repl '/' = '_'
+        repl  c   = c
+    in map repl
+
+
+secretifyName = map toUpper . replaceInvalidChars

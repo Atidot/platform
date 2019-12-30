@@ -39,7 +39,7 @@ data Deployment a
     | AttachSecret SecretName Name a
     | AttachVolume FolderDir Name a
     -- execution
-    | Execute Name [Arg] a
+    | Execute [Arg] Name [Arg] a
 
 
     deriving (Typeable, Functor)
@@ -57,6 +57,18 @@ kiss = do
     dbUrl  <- secret "tutorials/MyFirstTutorialSecret"
     volume1 <- mount "data"
     b <- container "hello-world"
+    execute [] "hello-world" []
+    return b
+
+
+nsss :: DeploymentM Bool
+nsss = do
+    secret  <- secret "tutorials/MyFirstTutorialSecret"
+    dir <- mount "data"
+    b <- container "hello-world"
+    attachSecret secret "hello-world"
+    attachVolume dir "hello-world"
+    execute [] "hello-world" []
     return b
 
 pacificLife :: DeploymentM Bool
