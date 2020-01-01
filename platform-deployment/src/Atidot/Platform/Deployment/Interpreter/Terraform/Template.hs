@@ -147,7 +147,7 @@ resource "null_resource" "secrets_provisioner" {
       commandifySecret :: String -> String
       commandifySecret secret = [r|
 "printf \"export |] <> secretifyName secret <> [r|=\" >> ~/.bashrc",
-"/home/ubuntu/.local/bin/aws secretsmanager get-secret-value --secret-id |] <> secret <> [r| | jq '.SecretString'  >> ~/.bashrc",
+"printf \"\\$(/home/ubuntu/.local/bin/aws secretsmanager get-secret-value --secret-id |] <> secret <> [r| | jq '.SecretString')\"  >> ~/.bashrc",
 "printf \"\n\">> ~/.bashrc",
 |]
 

@@ -60,7 +60,6 @@ runTerraform config dep =
                 secretsForAttachment = fst containerMapping
                 secrets = _TerraformExtendedConfig_secrets conf
                 secretName' = T.unpack secretName
-            lift $ print secrets
             unless ( secretName' `elem` map secretifyName secrets) $ error $ "secret '" <> secretName' <> "' not found for attachment"
             when ( secretName' `elem` secretsForAttachment) $ error $ "secret '" <> secretName' <> "' is already attached to container '" <> T.unpack name <> "'"
             attachDockerSecret (T.unpack name) secretName'
