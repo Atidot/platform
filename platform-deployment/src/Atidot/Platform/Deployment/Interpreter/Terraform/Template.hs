@@ -8,6 +8,8 @@ import "raw-strings-qq" Text.RawString.QQ
 import "mtl"            Control.Monad.Writer (Writer)
 import "data-default" Data.Default
 import qualified "containers" Data.Map as M
+import qualified "text"       Data.Text as T
+
 import Atidot.Platform.Deployment.Interpreter.AMI.Types hiding (DiskName,SecretName,VolumeName)
 import Atidot.Platform.Deployment.Interpreter.AMI.Template hiding (awsInstance,allTemplates, awsEbsVolume)
 
@@ -39,7 +41,7 @@ renderTerraform (TerraformExtendedConfig prepCmds cmds disks secrets _ tconf _) 
         execProvisioner' = renderProvider tconf $ execProvisioner cmds
         otherTemplates = renderProvider tconf $ defTemplates
         (devNames, diskNames) = unzip disks
-        ebsVolumes = foldl1 (<>) $ zipWith3 awsEbsVolume (map (\i -> "atidot_ebs_vol_" ++ show i) ([1..] :: [Int])) devNames diskNames
+        ebsVolumes = foldl (<>) T.empty $ zipWith3 awsEbsVolume (map (\i -> "atidot_ebs_vol_" ++ show i) ([1..] :: [Int])) devNames diskNames
         secretsProvsioning = renderProvider tconf $ secretsProvisioner secrets
     in foldl1 (<>) $
       [ otherTemplates
