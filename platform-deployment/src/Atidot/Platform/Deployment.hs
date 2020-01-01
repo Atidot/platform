@@ -43,88 +43,52 @@ hello :: DeploymentM Bool
 hello =
     container "hello-world"
 
+nsss :: DeploymentM Bool
+nsss = do
+    s <- secret "tutorials/MyFirstTutorialSecret"     -- declares secret that already exists in aws secrets manager
+    dir <- mount "data"                               -- declares the mounting of volume data into the machine
+    b <- container "hello-world"                      -- declares the container running hello world
+    attachSecret s "hello-world"                      -- attaches secret to the container
+    attachVolume dir "hello-world"                    -- attaches the volume to the container also
+    execute [] "hello-world" []                       -- executes the program inside the container
+    return b
+
+
 kiss :: DeploymentM Bool
 kiss = do
-    _dbUrl  <- secret "tutorials/MyFirstTutorialSecret"
+    _dbUrl <- secret "tutorials/MyFirstTutorialSecret"
     _volume1 <- mount "data"
     b <- container "hello-world"
     execute [] "hello-world" []
     return b
 
+noneExistentSecret :: DeploymentM Bool
+noneExistentSecret = do
+    _ <- secret "tutorials/MyFirstTutorialSecret2"
+    return False
 
-nsss :: DeploymentM Bool
-nsss = do
+noneExistentSecretAttached :: DeploymentM Bool
+noneExistentSecretAttached = do
+    attachSecret "tutorials/MyFirstTutorialSecret2" "hello-world"
+    return False
+
+secretDeclaredTwice :: DeploymentM Bool
+secretDeclaredTwice = do
+    _ <- secret "tutorials/MyFirstTutorialSecret"
+    _ <- secret "tutorials/MyFirstTutorialSecret"
+    return False
+
+secretAttachedTwice :: DeploymentM Bool
+secretAttachedTwice = do
     s <- secret "tutorials/MyFirstTutorialSecret"
-    dir <- mount "data"
-    b <- container "hello-world"
+    _ <- container "hello-world"
     attachSecret s "hello-world"
-    attachVolume dir "hello-world"
-    execute [] "hello-world" []
-    return b
+    attachSecret s "hello-world"
+    return False
 
-pacificLife :: DeploymentM Bool
-pacificLife = do
-    _dbUrl  <- secret "DB_URL"
-    _dbPass <- secret "DB_PASSWORD"
-    _volume1 <- mount "bli/bloo"
-    _volume2 <- mount "bli/bliiii/oooo"
-    _b <- container "atidot/undins"
-    b2 <- container "atidot/undins2"
-    return b2
-
-
-
-
--- Good for AMI, ECS, Kubernetes, Test, everything
--- newtype Deployment = Deployment
--- newtype ResourceName = ResourceName
--- newtype Secret = Secret
-
-
--- portIn :: Int -> Deployment ()
--- portIn n = undefined
-
-    -- make it available and ready
--- docker :: DockerImage -> Deployment Bool
--- docker image = undefined
-        -- 1. fetch it (docker load in AMI, or setting up Registry for ECS)
-        -- 2. it runs on boots - autostats
-
--- secret :: Key -> Deployment Secret
--- secret _ = undefined
-        -- 1. AWS Secret Store
-        -- 2. Vault Hashicorp
-        -- 3. Env variable
-
--- config :: Config -> Deployemt Config
--- config _ = undefined
-        --
-
--- mount :: S3Bucket -> Volume -> Deployment Bool
--- mount _ = undefined
-        -- in runTest -- could be mapping of a JSON-like tree structure
-        -- in AMI     -- S3 bucket
-        -- in ECS     -- ^
-
--- file :: File -> Deployment ()
--- file _ = undefined
-
-    -- Less of these:
-    -- run :: Deployment ()
-    -- autostart :: Deployment ()
-
-
-
-    ---------------------------------------------
--- runAMI :: AMIConfig -> Platform m -> IO ()
--- runAMI _ _ = undefined
-
--- runTest :: TestConfig -> Platform m -> IO ()
--- runTest _ _ = undefined
---     --
-
--- runECS :: ECSConfig -> Platform m -> IO ()
--- runECS _ _ = undefined
-
--- runKube :: KubeConfig -> Platform m -> IO ()
--- runKube _ _ = undefined
+containerDoesNotExists :: DeploymentM Bool
+containerDoesNotExists = do
+    s <- secret "tutorials/MyFirstTutorialSecret"
+    attachSecret s "hello-world"
+    attachSecret s "hello-world"
+    return False

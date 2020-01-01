@@ -3,7 +3,7 @@ module Atidot.Platform.Deployment.Interpreter.Terraform where
 
 import qualified "text"       Data.Text as T
 import           "base"       Data.Maybe
-import           "exceptions" Control.Monad.Catch (bracket)
+import           "exceptions" Control.Monad.Catch --(catch, bracket)
 import           "free"       Control.Monad.Free
 import           "mtl"        Control.Monad.State
 import           "turtle"     Turtle hiding (x, s, d)
@@ -39,6 +39,8 @@ runTerraform config dep =
             next True
         run (Secret secretName next) = do
             -- pull secrets from aws vault
+            --procs "aws" ["secretsmanager", "get-secret-value" ,"--secret-id", T.pack secretName ,">" ,"/dev/null", "2>&1"] stdin
+            secretRetrivalFailed secretName $ shells ("aws secretsmanager get-secret-value --secret-id " <> T.pack secretName <> " > /dev/null 2>&1") stdin
             addSecret secretName
             next $ T.pack $ secretifyName secretName
         run (Mount folderName next) = do
@@ -51,7 +53,17 @@ runTerraform config dep =
             updatePrep ["sudo","cat","/etc/fstab"]
             next $ T.pack folderDir
         run (AttachSecret secretName name next) = do
-            attachDockerSecret (T.unpack name) (T.unpack secretName)
+            conf <- get
+            let containerMapping = case M.lookup (T.unpack name) (_TerraformExtendedConfig_dockers conf) of
+                    Just x -> x
+                    Nothing -> error $ "container '" <> T.unpack name <> "' does not exist"
+                secretsForAttachment = fst containerMapping
+                secrets = _TerraformExtendedConfig_secrets conf
+                secretName' = T.unpack secretName
+            lift $ print secrets
+            unless ( secretName' `elem` map secretifyName secrets) $ error $ "secret '" <> secretName' <> "' not found for attachment"
+            when ( secretName' `elem` secretsForAttachment) $ error $ "secret '" <> secretName' <> "' is already attached to container '" <> T.unpack name <> "'"
+            attachDockerSecret (T.unpack name) secretName'
             next
         run (AttachVolume folderDir name next) = do
             attachDockerFolder (T.unpack name) (T.unpack folderDir)
@@ -92,7 +104,9 @@ addDisk diskName volume = modify $ \s -> s{ _TerraformExtendedConfig_disks = _Te
 
 
 addSecret :: MonadState TerraformExtendedConfig m => SecretName -> m ()
-addSecret secretName = modify $ \s -> s{ _TerraformExtendedConfig_secrets = _TerraformExtendedConfig_secrets s <> [secretName]}
+addSecret secretName = modify $ \s -> if elem secretName $ _TerraformExtendedConfig_secrets s
+    then error $ "secret '" <> secretName <> "' already exists"
+    else s{ _TerraformExtendedConfig_secrets = _TerraformExtendedConfig_secrets s <> [secretName]}
 
 getNextDisk :: StateT TerraformExtendedConfig IO (DeviceName, VolumeName)
 getNextDisk = do
@@ -104,3 +118,7 @@ getNextDisk = do
             let (physDisk:rest) = disks
             put $ conf{ _TerraformExtendedConfig_availableDisks = rest}
             return physDisk
+
+
+secretRetrivalFailed :: MonadCatch m => [Char] -> m a -> m a
+secretRetrivalFailed secretName action = action `catch` (\(_ :: ShellFailed) -> error $ "secret '" <> secretName <> "' not found")
