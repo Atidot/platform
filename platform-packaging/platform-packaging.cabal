@@ -31,6 +31,7 @@ library
                      , text
                      , free
                      , containers
+                     , directory
                      , language-python
                      , regex-pcre
                      , shelly
@@ -70,6 +71,7 @@ executable platform-packaging
                      , optparse-applicative
                      , text
                      , mtl
+                     , language-python
                      , platform-types
                      , platform-dsl
                      , platform-packaging

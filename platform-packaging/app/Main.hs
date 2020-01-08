@@ -17,6 +17,8 @@ import           "text"                    Data.Text (unpack)
 import           "mtl"                     Control.Monad.State (execStateT, evalStateT)
 import           "optparse-applicative"    Options.Applicative (Parser, strOption, long, metavar, help, header, fullDesc, helper, progDesc, info, execParser, (<**>))
 import           "directory"               System.Directory (getCurrentDirectory)
+import           "language-python"         Language.Python.Common.Pretty (Pretty, pretty)
+import           "language-python"         Language.Python.Common.PrettyAST ()
 import           "platform-types"          Platform.Types
 import           "platform-dsl"            Platform.DSL
 import qualified "platform-dsl"            Platform.DSL as DSL (test)
@@ -35,24 +37,39 @@ infile = InFile
          <> help "An input Python file." )
 
 main :: IO ()
-main = catDocker =<< execParser opts
+main = processFile printAST =<< execParser opts
     where opts = info (infile <**> helper)
-                 (fullDesc 
-                 <> progDesc "Print a Dockerfile that can run the input Python file." 
+                 (fullDesc
+                 <> progDesc "Print a Dockerfile that can run the input Python file."
                  <> header   "platform-packaging - currently a simplified test version.")
 
-catDocker :: InFile -> IO ()
-catDocker (InFile loc) = do
-    handle <- openFile loc ReadMode
+processFile :: (String -> IO ()) -> InFile -> IO ()
+processFile f inFile = do
+    handle <- openFile (location inFile) ReadMode
     contents <- hGetContents handle
-    pipModulesForInstall <- fmap (map (unpack . _pyPkg_name . snd) . fst) $ runPythonImports contents
-    let env = ContainerEnv 
-              Ubuntu 
-              [User "atidot"] 
-              "ubuntu:latest" 
+    f contents
+
+catDocker :: String -> IO ()
+catDocker module' = do
+    pipModulesForInstall <- fmap (map (unpack . _pyPkg_name . snd) . fst)
+                          . runPythonImports
+                          $ module'
+    let env = ContainerEnv
+              Ubuntu
+              [User "atidot"]
+              "ubuntu:latest"
               [("pip install -q", pipModulesForInstall)]
               empty
               []
               Nothing
               Nothing
-    putStrLn . dockerfile . toDocker $ env
+    putStrLn . dockerfile
+             . toDocker
+             $ env
+
+printAST :: String -> IO ()
+printAST module' = do
+    ast <- id --fmap (show . pretty)
+         . getAST
+         $ module'
+    putStrLn . show $ ast

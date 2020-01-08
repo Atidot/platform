@@ -27,6 +27,8 @@ stdenv.mkDerivation rec {
 
   buildInputs = [
     haskellEnv
+    nixpkgs.unzip
+    nixpkgs.gnutar
     python37Packages.pip
     python37Packages.virtualenv
   ];
