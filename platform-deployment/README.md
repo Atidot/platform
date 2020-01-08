@@ -17,7 +17,7 @@ Platform deployment package holds two parts:
 * In the terraform configuration, there is an sh key [path](src/Atidot/Platform/Deployment/Interpreter/AMI/Types/Default.hs#L23). It is needed to be supplied for the remote provisioners and for ssh connection into the deployed machine
 * AWS credentials for configuring the aws cli are needed but are prompted during `terraform init`
 * AWS EBS volumes are needed in order for mounting to work properly
-* Volume is needed to be created before running the interpreter.It’s (Volume) name/id should be be addedto the configuration [Here](src/Atidot/Platform/Deployment/Interpreter/Terraform/Template.hs#L17)
+* Volume is needed to be created before running the interpreter.It’s (Volume) name/id should be be addedto the configuration [Here](src/Atidot/Platform/Deployment/Interpreter/Terraform/Template.hs#L26)
 * Terraform deploys a single virtual machine with network components required for ssh connection into that machine. Then it uses a series of remote provisioners to change the state of the machine:
 * 1. Installation of software and secrets initialization [Here](src/Atidot/Platform/Deployment/Interpreter/Terraform/Template.hs#L85)
 * 1.  secrets mounting code [Here](src/Atidot/Platform/Deployment/Interpreter/Terraform/Template.hs#L110)

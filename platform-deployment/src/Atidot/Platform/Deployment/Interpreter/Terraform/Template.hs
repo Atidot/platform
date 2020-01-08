@@ -14,7 +14,16 @@ import Atidot.Platform.Deployment.Interpreter.AMI.Types hiding (DiskName,SecretN
 import Atidot.Platform.Deployment.Interpreter.AMI.Template hiding (awsInstance,allTemplates, awsEbsVolume)
 
 instance Default TerraformExtendedConfig where
-    def = TerraformExtendedConfig [] [] [] [] M.empty def $ zip ["xvdh","sdf","sdg","sdh","sdj"] ["vol-01ac704e80ba48949"]
+    def = TerraformExtendedConfig
+        []
+        []
+        []
+        []
+        M.empty
+        def
+        $ zip
+            ["xvdh","sdf","sdg","sdh","sdj"]
+            ["vol-01ac704e80ba48949"]
 
 type Cmd = String
 type SecretName = String
