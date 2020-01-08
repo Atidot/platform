@@ -5,35 +5,35 @@
 allows us to declare a deployment inside an aws instance, with dockers, disks and secrets declarative management
 
 Platform deployment package holds two parts:
-1. Deployment-dsl - High language implemented with free monad, that describes the things we need in order to deploy software configuration (containers, secrets and data) (#########Link to Deployment.hs)
+
+1. Deployment-dsl - High language implemented with free monad, that describes the things we need in order to deploy software configuration (containers, secrets and data). [Here](https://github.com/Atidot/platform/blob/deployment/platform-deployment/src/Atidot/Platform/Deployment.hs)
 1. Interpreters for deployment dsl - there are two interpreters
-1. 1. AMI - starts a machine in aws with terraform configuration, then apply changes, and eventually, saves an AMI containing all the changes supplied. This is dynamic, which means that the machine state is changed after applying each line (##### link to AMI)
-1. 1. Terraform - Generates a terraform deployment file, that once applied, will start and then configure a full machine, on `terraform init`. This is static, which means that the interpreter is run, and then a file is generated. There is no AMI ready at the end of the interpreter run. It is more mature of the two. (Link to Terraform.hs)
+1. 1. AMI - starts a machine in aws with terraform configuration, then apply changes, and eventually, saves an AMI containing all the changes supplied. This is dynamic, which means that the machine state is changed after applying each line. [Here](https://github.com/Atidot/platform/tree/deployment/platform-deployment/src/Atidot/Platform/Deployment/Interpreter/AMI.hs)
+1. 1. Terraform - Generates a terraform deployment file, that once applied, will start and then configure a full machine, on `terraform init`. This is static, which means that the interpreter is run, and then a file is generated. There is no AMI ready at the end of the interpreter run. It is more mature of the two. [here](https://github.com/Atidot/platform/blob/deployment/platform-deployment/src/Atidot/Platform/Deployment/Interpreter/Terraform.hs)
 
-## Terraform requirements and notes:
+## Terraform requirements and notes
 
-* Terraform (supply link) needs to be installed.
-* In the terraform configuration, there is an ssh key path (Link in config). It is needed to be supplied for the remote provisioners and for ssh connection into the deployed machine
+* [Terraform](https://www.terraform.io/) needs to be installed.
+* In the terraform configuration, there is an sh key [path](https://github.com/Atidot/platform/blob/75bc853b5f9bf6279203b00bc6aaa6c479f7c86c/platform-deployment/src/Atidot/Platform/Deployment/Interpreter/AMI/Types/Default.hs#L23). It is needed to be supplied for the remote provisioners and for ssh connection into the deployed machine
 * AWS credentials for configuring the aws cli are needed but are prompted during `terraform init`
 * AWS EBS volumes are needed in order for mounting to work properly
-* Volume is needed to be created before running the interpreter.It’s (Volume) name/id should be hardcoded into the configuration. There is an example for that in the code
-* Terraform deploys a single virtual machine, with all sorts of addons required for ssh into that machine. Then it uses a series of remote provisioners to change the state of the machine:
-* 1. Installation of software
-* 1. Mounting secrets initialization
-* 1. Mounting and cli
-* 1. Running dockers (Run command in the deployment DSL)
-* In order to run new scripts, they should be added in Main.hs, similarly to the already existing scripts.
-Nes,nesa,std,sat,cdne - are error checking scripts, they should fail
+* Volume is needed to be created before running the interpreter.It’s (Volume) name/id should be be addedto the configuration [Here](https://github.com/Atidot/platform/blob/75bc853b5f9bf6279203b00bc6aaa6c479f7c86c/platform-deployment/src/Atidot/Platform/Deployment/Interpreter/Terraform/Template.hs#L17)
+* Terraform deploys a single virtual machine with network components required for ssh connection into that machine. Then it uses a series of remote provisioners to change the state of the machine:
+.. 1. Installation of software and secrets initialization [Here](https://github.com/Atidot/platform/blob/75bc853b5f9bf6279203b00bc6aaa6c479f7c86c/platform-deployment/src/Atidot/Platform/Deployment/Interpreter/Terraform/Template.hs#L85)
+.. 1.  secrets mounting code[Here] (https://github.com/Atidot/platform/blob/75bc853b5f9bf6279203b00bc6aaa6c479f7c86c/platform-deployment/src/Atidot/Platform/Deployment/Interpreter/Terraform/Template.hs#L110)
+.. 1. Mounting and pulling dockers[Here] (https://github.com/Atidot/platform/blob/75bc853b5f9bf6279203b00bc6aaa6c479f7c86c/platform-deployment/src/Atidot/Platform/Deployment/Interpreter/Terraform/Template.hs#L156)
+.. 1. Running dockers (Run command in the deployment DSL) [Here](https://github.com/Atidot/platform/blob/75bc853b5f9bf6279203b00bc6aaa6c479f7c86c/platform-deployment/src/Atidot/Platform/Deployment/Interpreter/Terraform/Template.hs#L189)
+* In order to run new scripts, they should be added in [Main](https://github.com/Atidot/platform/blob/75bc853b5f9bf6279203b00bc6aaa6c479f7c86c/platform-deployment/app/Main.hs#L27)
+Nes,nesa,std,sat,cdne - are error checking scripts, they should fail.
 * All secrets used must be properly defined in advance in the AWS secrets manager
-
 
 ## Next Steps
 
-* CLI Argument for terraform configurations (using json, from file?)
-* In order to avoid credentials for aws-cli completely, we can register an IAM for the AMI, or load the credentials by using user data
-* Separate failed scripts to tests, to ensure that behavior is stable
+* In order to avoid credentials for aws-cli completely, we can add an IAM role for the AMI [Here](https://dzone.com/articles/aws-secret-manager-protect-your-secrets-in-applica)
+* CLI שrgument for terraform configurations (using json, from file?)
+* Separate failed scripts (Nes,nesa,std,sat,cdne) to tests, to ensure that behavior is stable
 * Instead of provisioner for running dockers, a provisioner for preparing a script that run dockers on computer start
-* Better name giving to the ebs volumes (will be relevant if we want more than one volume)
+* Better name giving to the ebs volumes (will be relevant if we want more than one volume) [Here](https://github.com/Atidot/platform/blob/75bc853b5f9bf6279203b00bc6aaa6c479f7c86c/platform-deployment/src/Atidot/Platform/Deployment/Interpreter/Terraform/Template.hs#L44)
 * Improving the description of secrets in the dsl (they come in tuples at least, and are in a json format),
 * Calling Container keyword should return the name of the container for use, instead of boolean right now (which holds no real meaning)
 
