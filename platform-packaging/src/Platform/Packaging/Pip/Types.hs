@@ -473,7 +473,7 @@ instance Opts DownloadOpts where
           txtPrint "python-version" pythonVersion,
           txtPrint "implementation" implementation,
           txtPrint "abi" abi,
-          txtPrint "index" index,
+          txtPrint "index-url" index,
           txtPrint "extra-index" extraIndex,
           boolPrint "no-index" noIndex,
           txtPrint "find-links" findLinks

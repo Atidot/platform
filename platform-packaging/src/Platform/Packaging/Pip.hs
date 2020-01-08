@@ -3,7 +3,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PackageImports #-}
 
-module Platform.Packaging.Pip 
+module Platform.Packaging.Pip
     (install, download, uninstall, freeze, list, pipShow, search, check, config, wheel, hash, debug, UpgradeStrategy, FormatControl, OutputFormat, ProgressBar, HashAlgs, InstallOpts, DownloadOpts, UninstallOpts, FreezeOpts, ListOpts, ShowOpts, SearchOpts, CheckOpts, ConfigOpts, WheelOpts, HashOpts, DebugOpts, PipInput, UninstallInput, ConfigInput) where
 
 import           "base"            Data.Data (Data)
@@ -19,7 +19,7 @@ import                             Platform.Packaging.Pip.Types
 -- Do not export this, as it allows e.g. InstallOpts to be used with "wheel".
 -- It exists because several of the commands have identical
 -- inputs, so their processing can happen all at once.
-pipCmd :: (Opts a) 
+pipCmd :: (Opts a)
        => Text 
        -> GeneralOpts 
        -> a 

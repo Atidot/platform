@@ -30,6 +30,7 @@ library
                      , extra
                      , text
                      , free
+                     , fuzzyset
                      , containers
                      , directory
                      , language-python

@@ -37,7 +37,7 @@ infile = InFile
          <> help "An input Python file." )
 
 main :: IO ()
-main = processFile printAST =<< execParser opts
+main = processFile printImports =<< execParser opts
     where opts = info (infile <**> helper)
                  (fullDesc
                  <> progDesc "Print a Dockerfile that can run the input Python file."
@@ -73,3 +73,9 @@ printAST module' = do
          . getAST
          $ module'
     putStrLn . show $ ast
+
+printImports :: String -> IO ()
+printImports s = do
+    imports <- runPythonImports s
+    let pkgs = map (unpack . _pyPkg_name . snd) . fst $ imports
+    putStrLn . unlines $ pkgs
