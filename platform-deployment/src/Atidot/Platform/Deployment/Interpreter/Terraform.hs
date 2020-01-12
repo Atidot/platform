@@ -39,10 +39,9 @@ runTerraform config dep =
             next containerName
         run (Secret secretName next) = do
             -- pull secrets from aws vault
-            --procs "aws" ["secretsmanager", "get-secret-value" ,"--secret-id", T.pack secretName ,">" ,"/dev/null", "2>&1"] stdin
-            secretRetrivalFailed secretName $ shells ("aws secretsmanager get-secret-value --secret-id " <> T.pack secretName <> " > /dev/null 2>&1") stdin
-            addSecret secretName
-            next $ T.pack $ secretifyName secretName
+            secretRetrivalFailed secretName $ shells ("aws secretsmanager get-secret-value --secret-id " <> secretName <> " > /dev/null 2>&1") stdin
+            addSecret $ T.unpack secretName
+            next $ T.pack $ secretifyName $ T.unpack secretName
         run (Mount folderName next) = do
             (devMapping, volId) <- getNextDisk
             addDisk devMapping volId
@@ -119,5 +118,5 @@ getNextDisk = do
             return physDisk
 
 
-secretRetrivalFailed :: MonadCatch m => [Char] -> m a -> m a
-secretRetrivalFailed secretName action = action `catch` (\(_ :: ShellFailed) -> error $ "secret '" <> secretName <> "' not found")
+secretRetrivalFailed :: MonadCatch m => Text -> m a -> m a
+secretRetrivalFailed secretName action = action `catch` (\(_ :: ShellFailed) -> error $ "secret '" <> T.unpack secretName <> "' not found")

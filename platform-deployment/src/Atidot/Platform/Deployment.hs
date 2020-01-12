@@ -14,7 +14,6 @@ data Disk = Disk FilePath
 
 
 type Name = Text
-type SecretValue = String
 type SecretName = Text
 type DiskName = Text
 type VolumeName = Text
@@ -24,7 +23,7 @@ type Arg = Text
 data Deployment a
     -- resource declarations
     = Container Name (Name -> a) -- bool
-    | Secret SecretValue (SecretName -> a)
+    | Secret SecretName (SecretName -> a)
     | Mount DiskName (VolumeName -> a)
     -- resource attachments
     | AttachSecret SecretName Name a
@@ -39,16 +38,25 @@ type DeploymentM = Free Deployment
 
 makeFree ''Deployment
 
+placeHolderContainer :: Name
+placeHolderContainer = "helloWorld"
+
+placeHolderSecret :: SecretName
+placeHolderSecret = "tutorials/MyFirstTutorialSecret" -- this must exist in aws secrets manager in the user's account
+
+placeHolderData :: DiskName
+placeHolderData = "data"
+
 hello :: DeploymentM ()
 hello = do
-    _ <- container "hello-world"
+    _ <- container placeHolderContainer
     return ()
 
 nsss :: DeploymentM ()
 nsss = do
-    s <- secret "tutorials/MyFirstTutorialSecret"     -- declares secret that already exists in aws secrets manager
-    dir <- mount "data"                               -- declares the mounting of volume data into the machine
-    c <- container "hello-world"                      -- declares the container running hello world
+    s <- secret placeHolderSecret     -- declares secret that already exists in aws secrets manager
+    dir <- mount placeHolderData                               -- declares the mounting of volume data into the machine
+    c <- container placeHolderContainer                      -- declares the container running hello world
     attachSecret s c                      -- attaches secret to the container
     attachVolume dir c                    -- attaches the volume to the container also
     execute [] c []                       -- executes the program inside the container
@@ -56,36 +64,37 @@ nsss = do
 
 kiss :: DeploymentM ()
 kiss = do
-    _dbUrl <- secret "tutorials/MyFirstTutorialSecret"
-    _volume1 <- mount "data"
-    c <- container "hello-world"
+    _dbUrl <- secret placeHolderSecret
+    _volume1 <- mount placeHolderData
+    c <- container placeHolderContainer
     execute [] c []
 
 noneExistentSecret :: DeploymentM ()
 noneExistentSecret = do
-    _ <- secret "tutorials/MyFirstTutorialSecret2"
+    let noneExistantSecretPlaceholder = "some/secret"
+    _ <- secret noneExistantSecretPlaceholder
     return ()
 
 noneExistentSecretAttached :: DeploymentM ()
 noneExistentSecretAttached = do
-    attachSecret "tutorials/MyFirstTutorialSecret2" "hello-world"
+    let noneExistantSecretPlaceholder = "some/secret"
+    attachSecret noneExistantSecretPlaceholder placeHolderContainer
     return ()
 
 secretDeclaredTwice :: DeploymentM ()
 secretDeclaredTwice = do
-    _ <- secret "tutorials/MyFirstTutorialSecret"
-    _ <- secret "tutorials/MyFirstTutorialSecret"
+    _ <- secret placeHolderSecret
+    _ <- secret placeHolderSecret
     return ()
 
 secretAttachedTwice :: DeploymentM ()
 secretAttachedTwice = do
-    s <- secret "tutorials/MyFirstTutorialSecret"
-    c <- container "hello-world"
+    s <- secret placeHolderSecret
+    c <- container placeHolderContainer
     attachSecret s c
     attachSecret s c
 
 containerDoesNotExists :: DeploymentM ()
 containerDoesNotExists = do
-    s <- secret "tutorials/MyFirstTutorialSecret"
-    attachSecret s "hello-world"
-    attachSecret s "hello-world"
+    s <- secret placeHolderSecret
+    attachSecret s placeHolderContainer

@@ -67,12 +67,12 @@ runAMI config dep =
             next containerName
 
         run publicDns (Secret secretData next) = do
-            isFile <- liftIO $ doesFileExist secretData
+            isFile <- liftIO $ doesFileExist $ T.unpack secretData
             if isFile then do
                 -- path <- copy file into remote location
                 -- conf <- get
                 nuid <- liftIO nextRandom
-                scpW publicDns (T.pack secretData) rSecretsDir
+                scpW publicDns secretData rSecretsDir
                 --let fname = encodeString $ fromText rSecretsDir </> filename (decodeString secretData)
                 -- add path to state
                 --    conf' = conf{ _AMIConfig_secrets = _AMIConfig_secrets conf <> [(nuid,(secretData,Just fname,Nothing))]}
@@ -81,7 +81,7 @@ runAMI config dep =
                 conf <- get
                 nuid <- liftIO nextRandom
                 -- store directly in the st ate
-                let conf' = conf{ _AMIConfig_secrets = _AMIConfig_secrets conf <> [(nuid,(secretData,Nothing,Nothing))]}
+                let conf' = conf{ _AMIConfig_secrets = _AMIConfig_secrets conf <> [(nuid,(T.unpack secretData,Nothing,Nothing))]}
                 put conf'
                 next $ T.pack $ show nuid
 
