@@ -20,7 +20,7 @@ runTest config dep = do
         run :: Deployment (StateT TestConfig IO a) -> StateT TestConfig IO a
         run (Container _containerName next) = do
             liftIO $ putStrLn "some container cmd"
-            next True
+            next _containerName
         run (Secret _secretData next) = do
             liftIO $ putStrLn "some secret thingy"
             next ""

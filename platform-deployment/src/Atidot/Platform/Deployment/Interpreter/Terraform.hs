@@ -36,7 +36,7 @@ runTerraform config dep =
         run (Container containerName next) = do
             updateDockers $ T.unpack containerName
             updatePrep ["docker","pull", T.unpack containerName]
-            next True
+            next containerName
         run (Secret secretName next) = do
             -- pull secrets from aws vault
             --procs "aws" ["secretsmanager", "get-secret-value" ,"--secret-id", T.pack secretName ,">" ,"/dev/null", "2>&1"] stdin

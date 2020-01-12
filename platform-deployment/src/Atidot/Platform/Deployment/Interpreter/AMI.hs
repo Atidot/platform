@@ -64,7 +64,7 @@ runAMI config dep =
             let diskMappings = filter ((== Just containerName) . snd . snd ) $ _AMIConfig_mounts conf
                 diskMappingsInDocker = concatMap (\(vol,(disk,_)) -> ["-v",vol <> ":" <> disk]) diskMappings
             lift $ sshW publicDns $ ["docker","run"] <> diskMappingsInDocker <> [containerName]
-            next True
+            next containerName
 
         run publicDns (Secret secretData next) = do
             isFile <- liftIO $ doesFileExist secretData

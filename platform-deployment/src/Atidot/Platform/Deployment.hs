@@ -23,7 +23,7 @@ type Arg = Text
 
 data Deployment a
     -- resource declarations
-    = Container Name (Bool -> a) -- bool
+    = Container Name (Name -> a) -- bool
     | Secret SecretValue (SecretName -> a)
     | Mount DiskName (VolumeName -> a)
     -- resource attachments
@@ -39,56 +39,53 @@ type DeploymentM = Free Deployment
 
 makeFree ''Deployment
 
-hello :: DeploymentM Bool
-hello =
-    container "hello-world"
+hello :: DeploymentM ()
+hello = do
+    _ <- container "hello-world"
+    return ()
 
-nsss :: DeploymentM Bool
+nsss :: DeploymentM ()
 nsss = do
     s <- secret "tutorials/MyFirstTutorialSecret"     -- declares secret that already exists in aws secrets manager
     dir <- mount "data"                               -- declares the mounting of volume data into the machine
-    b <- container "hello-world"                      -- declares the container running hello world
-    attachSecret s "hello-world"                      -- attaches secret to the container
-    attachVolume dir "hello-world"                    -- attaches the volume to the container also
-    execute [] "hello-world" []                       -- executes the program inside the container
-    return b
+    c <- container "hello-world"                      -- declares the container running hello world
+    attachSecret s c                      -- attaches secret to the container
+    attachVolume dir c                    -- attaches the volume to the container also
+    execute [] c []                       -- executes the program inside the container
 
 
-kiss :: DeploymentM Bool
+kiss :: DeploymentM ()
 kiss = do
     _dbUrl <- secret "tutorials/MyFirstTutorialSecret"
     _volume1 <- mount "data"
-    b <- container "hello-world"
-    execute [] "hello-world" []
-    return b
+    c <- container "hello-world"
+    execute [] c []
 
-noneExistentSecret :: DeploymentM Bool
+noneExistentSecret :: DeploymentM ()
 noneExistentSecret = do
     _ <- secret "tutorials/MyFirstTutorialSecret2"
-    return False
+    return ()
 
-noneExistentSecretAttached :: DeploymentM Bool
+noneExistentSecretAttached :: DeploymentM ()
 noneExistentSecretAttached = do
     attachSecret "tutorials/MyFirstTutorialSecret2" "hello-world"
-    return False
+    return ()
 
-secretDeclaredTwice :: DeploymentM Bool
+secretDeclaredTwice :: DeploymentM ()
 secretDeclaredTwice = do
     _ <- secret "tutorials/MyFirstTutorialSecret"
     _ <- secret "tutorials/MyFirstTutorialSecret"
-    return False
+    return ()
 
-secretAttachedTwice :: DeploymentM Bool
+secretAttachedTwice :: DeploymentM ()
 secretAttachedTwice = do
     s <- secret "tutorials/MyFirstTutorialSecret"
-    _ <- container "hello-world"
-    attachSecret s "hello-world"
-    attachSecret s "hello-world"
-    return False
+    c <- container "hello-world"
+    attachSecret s c
+    attachSecret s c
 
-containerDoesNotExists :: DeploymentM Bool
+containerDoesNotExists :: DeploymentM ()
 containerDoesNotExists = do
     s <- secret "tutorials/MyFirstTutorialSecret"
     attachSecret s "hello-world"
     attachSecret s "hello-world"
-    return False
