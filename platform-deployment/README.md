@@ -1,8 +1,8 @@
 # platform-deployment
 
-## intro
+## Intro
 
-allows us to declare a deployment inside an aws instance, with dockers, disks and secrets declarative management
+Allows us to declare a deployment inside an aws instance, with dockers, disks and secrets declarative management
 
 Platform deployment package holds two parts:
 

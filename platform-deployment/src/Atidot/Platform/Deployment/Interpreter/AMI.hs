@@ -19,7 +19,9 @@ import                        Atidot.Platform.Deployment.Interpreter.AMI.Types
 -- // $ ssh ubuntu@<public_dns> -i ~/.ssh/terraform-keys2
 
 
-runAMI :: AMIConfig -> DeploymentM a -> IO ()
+runAMI :: AMIConfig
+       -> DeploymentM a
+       -> IO ()
 runAMI config dep =
     bracket init'
             fini
@@ -58,7 +60,9 @@ runAMI config dep =
             _ <-  (runStateT (iterM (run publicDns) dep) config)
             return ()
 
-        run :: Text -> Deployment (StateT AMIConfig IO a) -> StateT AMIConfig IO a
+        run :: Text
+            -> Deployment (StateT AMIConfig IO a)
+            -> StateT AMIConfig IO a
         run publicDns (Container containerName next) = do
             conf <- get
             let diskMappings = filter ((== Just containerName) . snd . snd ) $ _AMIConfig_mounts conf
@@ -99,8 +103,14 @@ runAMI config dep =
         run _ (AttachVolume _ _ next) = next
         run _ (Execute _ _ _ next) = next
 
-sshW :: Text -> [Text] -> IO ()
-sshW pdns cmd = procs "ssh" (["ubuntu@"<>pdns,"-o","StrictHostKeyChecking=no","-i","~/.ssh/terraform-keys2"] <> cmd) stdin
+sshW :: Text
+     -> [Text]
+     -> IO ()
+sshW publicDns cmd = procs "ssh" (["ubuntu@"<>publicDns,"-o","StrictHostKeyChecking=no","-i","~/.ssh/terraform-keys2"] <> cmd) stdin
 
-scpW :: MonadIO io => Text -> Text -> Text -> io ()
-scpW pdns lcl rmt = procs "scp" ["-o","StrictHostKeyChecking=no","-i","~/.ssh/terraform-keys2",lcl, "ubuntu" <> "@" <> pdns <> ":" <> rmt] stdin
+scpW :: MonadIO io
+     => Text
+     -> Text
+     -> Text
+     -> io ()
+scpW publicDns lcl rmt = procs "scp" ["-o","StrictHostKeyChecking=no","-i","~/.ssh/terraform-keys2",lcl, "ubuntu" <> "@" <> publicDns <> ":" <> rmt] stdin

@@ -13,6 +13,11 @@ import qualified "text"       Data.Text as T
 import Atidot.Platform.Deployment.Interpreter.AMI.Types hiding (DiskName,SecretName,VolumeName)
 import Atidot.Platform.Deployment.Interpreter.AMI.Template hiding (awsInstance,allTemplates, awsEbsVolume)
 
+placeHolderAwsEbsVolumes :: [VolumeName]
+placeHolderAwsEbsVolumes = ["vol-01ac704e80ba48949"] -- These should be created in the AWS before running the code
+placeHoldersPhysicalDiskMappings :: [DeviceName]
+placeHoldersPhysicalDiskMappings = ["xvdh","sdf","sdg","sdh","sdj"]
+
 instance Default TerraformExtendedConfig where
     def = TerraformExtendedConfig
         []
@@ -22,8 +27,8 @@ instance Default TerraformExtendedConfig where
         M.empty
         def
         $ zip
-            ["xvdh","sdf","sdg","sdh","sdj"]
-            ["vol-01ac704e80ba48949"]
+            placeHoldersPhysicalDiskMappings
+            placeHolderAwsEbsVolumes
 
 type Cmd = String
 type SecretName = String
@@ -231,7 +236,10 @@ resource "null_resource" "executor" {
 
 
 
-awsEbsVolume :: Name -> DeviceName -> VolumeName -> Text
+awsEbsVolume :: Name
+             -> DeviceName
+             -> VolumeName
+             -> Text
 awsEbsVolume name deviceName volumeName = do
     let ctx :: GVal (Run SourcePos (Writer Text) Text)
         ctx = dict $ map (\(a,b) -> a ~> b)
