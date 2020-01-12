@@ -43,10 +43,10 @@ nsss :: DeploymentM Bool
 nsss = do
     secret <- secret "tutorials/MyFirstTutorialSecret"
     dir <- mount "data"
-    b <- container "hello-world"
-    attachSecret secret "hello-world"
-    attachVolume dir "hello-world"
-    execute [] "hello-world" []
+    c <- container "hello-world"
+    attachSecret secret c
+    attachVolume dir c
+    execute [] c []
     return b
 ```
 
