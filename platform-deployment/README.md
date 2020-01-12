@@ -35,7 +35,6 @@ Nes,nesa,std,sat,cdne - are error checking scripts, they should fail.
 * Instead of provisioner for running dockers, a provisioner for preparing a script that run dockers on computer start
 * Better name giving to the ebs volumes (will be relevant if we want more than one volume) [Here](src/Atidot/Platform/Deployment/Interpreter/Terraform/Template.hs#L44)
 * Improving the description of secrets in the dsl (they come in tuples at least, and are in a json format),
-* Calling Container keyword should return the name of the container for use, instead of boolean right now (which holds no real meaning)
 
 ## example script
 
