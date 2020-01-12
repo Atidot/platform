@@ -33,7 +33,7 @@ instance Default TerraformExtendedConfig where
 type Cmd = String
 type SecretName = String
 type DiskName = String
-type VolumeName = String
+type VolumeName = String -- ebs volume name
 type Name = String
 type DeviceName = String
 type FolderDir = String

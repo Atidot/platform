@@ -82,12 +82,15 @@ runTerraform config dep =
 updatePrep :: (MonadState TerraformExtendedConfig m, Foldable t)
            => t [Char]
            -> m ()
-updatePrep cmd = modify $ \s -> s{ _TerraformExtendedConfig_instancePrep = _TerraformExtendedConfig_instancePrep s <> [foldl1 (\x y -> x <> " " <> y) cmd]}
+updatePrep cmd = modify $ \s -> s{ _TerraformExtendedConfig_instancePrep = _TerraformExtendedConfig_instancePrep s <> addCmd cmd}
 
 updateExec :: (MonadState TerraformExtendedConfig m, Foldable t)
            => t [Char]
            -> m ()
-updateExec cmd = modify $ \s -> s{ _TerraformExtendedConfig_instanceExec = _TerraformExtendedConfig_instanceExec s <> [foldl1 (\x y -> x <> " " <> y) cmd]}
+updateExec cmd = modify $ \s -> s{ _TerraformExtendedConfig_instanceExec = _TerraformExtendedConfig_instanceExec s <> addCmd cmd}
+
+addCmd :: (Foldable t, Semigroup a, IsString a) => t a -> [a]
+addCmd cmd = [foldl1 (\x y -> x <> " " <> y) cmd]
 
 attachDockerFolder :: MonadState TerraformExtendedConfig m
                    => Name
@@ -95,7 +98,13 @@ attachDockerFolder :: MonadState TerraformExtendedConfig m
                    -> m ()
 attachDockerFolder name folderDir = modify $ \s ->  case M.lookup name (_TerraformExtendedConfig_dockers s) of
     Nothing -> error $ "attachDockerFolder: docker '" ++ show name ++ "' not found"
-    Just _ -> s{ _TerraformExtendedConfig_dockers = M.insertWith (\a b -> (fst a ++ fst b,snd a ++ snd b)) name ([],[folderDir]) (_TerraformExtendedConfig_dockers s)}
+    Just _ -> s{ _TerraformExtendedConfig_dockers =
+                    M.insertWith
+                        (\a b -> (fst a ++ fst b,snd a ++ snd b))
+                        name
+                        ([],[folderDir])
+                        (_TerraformExtendedConfig_dockers s)
+               }
 
 attachDockerSecret :: MonadState TerraformExtendedConfig m
                    => Name
@@ -103,14 +112,25 @@ attachDockerSecret :: MonadState TerraformExtendedConfig m
                    -> m ()
 attachDockerSecret name sec = modify $ \s ->  case M.lookup name (_TerraformExtendedConfig_dockers s) of
     Nothing -> error $ "attachDockerSecret: docker '" ++ show name ++ "' not found"
-    Just _ -> s{ _TerraformExtendedConfig_dockers = M.insertWith (\a b -> (fst a ++ fst b,snd a ++ snd b)) name ([sec],[]) (_TerraformExtendedConfig_dockers s)}
+    Just _ -> s{ _TerraformExtendedConfig_dockers =
+                    M.insertWith
+                        (\a b -> (fst a ++ fst b,snd a ++ snd b))
+                        name
+                        ([sec],[])
+                        (_TerraformExtendedConfig_dockers s)
+               }
 
 updateDockers :: MonadState TerraformExtendedConfig m
               => Name
               -> m ()
 updateDockers name = modify $ \s -> if M.member name (_TerraformExtendedConfig_dockers s)
     then s
-    else s{ _TerraformExtendedConfig_dockers = M.insert name ([],[]) (_TerraformExtendedConfig_dockers s)}
+    else s{ _TerraformExtendedConfig_dockers =
+                M.insert
+                    name
+                    ([],[])
+                    (_TerraformExtendedConfig_dockers s)
+          }
 
 addDisk :: MonadState TerraformExtendedConfig m
         => DeviceName
