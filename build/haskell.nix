@@ -16,24 +16,26 @@ rec {
     rev = "64e7bfb3abcad278e6160cd411abdd21a485a671";
   };
 
-  platformTypesSrc     = ../platform-types;
-  platformDSLSrc       = ../platform-dsl;
-  platformAWSSrc       = ../platform-aws;
-  platformKubeSrc      = ../platform-kube;
-  platformProcessSrc   = ../platform-process;
-  platformPackagingSrc = ../platform-packaging;
-  platformVisualSrc    = ../platform-visual;
+  platformTypesSrc          = ../platform-types;
+  platformDSLSrc            = ../platform-dsl;
+  platformAWSSrc            = ../platform-aws;
+  platformKubeSrc           = ../platform-kube;
+  platformProcessSrc        = ../platform-process;
+  platformPackagingSrc      = ../platform-packaging;
+  platformPackagingTypesSrc = ../platform-packaging-types;
+  platformVisualSrc         = ../platform-visual;
 
   projectPackages = hspkgs: {
-    language-python    = ease hspkgs.language-python;
-    stratosphere       = hspkgs.callCabal2nix "stratosphere"       "${stratosphereSrc}" {};
-    platform-types     = hspkgs.callCabal2nix "platform-types"     "${platformTypesSrc}" {};
-    platform-dsl       = hspkgs.callCabal2nix "platform-dsl"       "${platformDSLSrc}" {};
-    platform-aws       = hspkgs.callCabal2nix "platform-aws"       "${platformAWSSrc}" {};
-    platform-kube      = hspkgs.callCabal2nix "platform-kube"      "${platformKubeSrc}" {};
-    platform-packaging = hspkgs.callCabal2nix "platform-packaging" "${platformPackagingSrc}" {};
-    platform-process   = hspkgs.callCabal2nix "platform-process"   "${platformProcessSrc}" {};
-    platform-visual    = hspkgs.callCabal2nix "platform-visual"    "${platformVisualSrc}" {};
+    language-python          = ease hspkgs.language-python;
+    stratosphere             = hspkgs.callCabal2nix "stratosphere"             "${stratosphereSrc}" {};
+    platform-types           = hspkgs.callCabal2nix "platform-types"           "${platformTypesSrc}" {};
+    platform-dsl             = hspkgs.callCabal2nix "platform-dsl"             "${platformDSLSrc}" {};
+    platform-aws             = hspkgs.callCabal2nix "platform-aws"             "${platformAWSSrc}" {};
+    platform-kube            = hspkgs.callCabal2nix "platform-kube"            "${platformKubeSrc}" {};
+    platform-packaging       = hspkgs.callCabal2nix "platform-packaging"       "${platformPackagingSrc}" {};
+    platform-packaging-types = hspkgs.callCabal2nix "platform-packaging-types" "${platformPackagingTypesSrc}" {};
+    platform-process         = hspkgs.callCabal2nix "platform-process"         "${platformProcessSrc}" {};
+    platform-visual          = hspkgs.callCabal2nix "platform-visual"          "${platformVisualSrc}" {};
   };
 
   packages = haskellPackages.override (old: {

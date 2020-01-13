@@ -12,35 +12,35 @@ module Platform.Packaging.PythonImports
     , getAST
     ) where
 
-import           "base"            Debug.Trace (trace)
-import           "base"            Control.Monad.IO.Class (MonadIO, liftIO)
-import           "base"            Control.Monad (when, unless, filterM, zipWithM, sequence_)
-import           "base"            Data.Typeable (Typeable)
-import           "base"            Data.Data (Data)
-import           "base"            Data.List (foldl', intercalate, isSuffixOf, partition, sortBy, (\\))
-import           "base"            Data.Maybe (isJust, fromJust)
-import           "base"            GHC.Generics (Generic)
-import           "aeson"           Data.Aeson (FromJSON, ToJSON, toEncoding, genericToEncoding, defaultOptions)
-import           "data-default"    Data.Default (def)
-import qualified "fuzzyset"        Data.FuzzySet as FS (fromList, get)
-import           "text"            Data.Text (Text, pack, unpack, replace, split)
-import qualified "text"            Data.Text as T
-import qualified "text"            Data.Text.IO as TIO
-import           "extra"           Data.Tuple.Extra ((&&&))
-import           "extra"           Control.Monad.Extra (concatMapM)
-import           "lens"            Control.Lens
-import           "exceptions"      Control.Monad.Catch (Exception, MonadMask, MonadCatch, MonadThrow, throwM, catchAll, handleAll, catchIOError, bracket, catchIf)
-import           "regex-pcre"      Text.Regex.PCRE
-import           "directory"       System.Directory (listDirectory, doesDirectoryExist, doesFileExist, getTemporaryDirectory, setCurrentDirectory, getCurrentDirectory, createDirectoryIfMissing, removeFile, removeDirectoryRecursive, canonicalizePath)
-import           "temporary"       System.IO.Temp (createTempDirectory)
-import           "language-python" Language.Python.Common.AST
-import           "language-python" Language.Python.Common.Token (Token, token_literal, token_span)
-import           "language-python" Language.Python.Common.SrcLocation (SrcSpan(SpanCoLinear))
-import           "language-python" Language.Python.Version3.Parser (parseModule, parseStmt)
-import           "language-python" Language.Python.Common.ParseError (ParseError)
-import           "shellmet"        Shellmet
-import                             Platform.Packaging.Pip
-import                             Platform.Packaging.Pip.Types
+import           "base"                     Debug.Trace (trace)
+import           "base"                     Control.Monad.IO.Class (MonadIO, liftIO)
+import           "base"                     Control.Monad (when, unless, filterM, zipWithM, sequence_)
+import           "base"                     Data.Typeable (Typeable)
+import           "base"                     Data.Data (Data)
+import           "base"                     Data.List (foldl', intercalate, isSuffixOf, partition, sortBy, (\\))
+import           "base"                     Data.Maybe (isJust, fromJust)
+import           "base"                     GHC.Generics (Generic)
+import           "aeson"                    Data.Aeson (FromJSON, ToJSON, toEncoding, genericToEncoding, defaultOptions)
+import           "data-default"             Data.Default (def)
+import qualified "fuzzyset"                 Data.FuzzySet as FS (fromList, get)
+import           "text"                     Data.Text (Text, pack, unpack, replace, split)
+import qualified "text"                     Data.Text as T
+import qualified "text"                     Data.Text.IO as TIO
+import           "extra"                    Data.Tuple.Extra ((&&&))
+import           "extra"                    Control.Monad.Extra (concatMapM)
+import           "lens"                     Control.Lens
+import           "exceptions"               Control.Monad.Catch (Exception, MonadMask, MonadCatch, MonadThrow, throwM, catchAll, handleAll, catchIOError, bracket, catchIf)
+import           "regex-pcre"               Text.Regex.PCRE
+import           "directory"                System.Directory (listDirectory, doesDirectoryExist, doesFileExist, getTemporaryDirectory, setCurrentDirectory, getCurrentDirectory, createDirectoryIfMissing, removeFile, removeDirectoryRecursive, canonicalizePath)
+import           "temporary"                System.IO.Temp (createTempDirectory)
+import           "language-python"          Language.Python.Common.AST
+import           "language-python"          Language.Python.Common.Token (Token, token_literal, token_span)
+import           "language-python"          Language.Python.Common.SrcLocation (SrcSpan(SpanCoLinear))
+import           "language-python"          Language.Python.Version3.Parser (parseModule, parseStmt)
+import           "language-python"          Language.Python.Common.ParseError (ParseError)
+import           "shellmet"                 Shellmet
+import           "platform-packaging-types" Platform.Packaging.Pip.Types
+import                                      Platform.Packaging.Pip
 
 type URL = Text
 
@@ -501,7 +501,8 @@ enumerateSubmodules fp mn = do
     initPresent <- containsInit fp
     trace ("init present is considered " <> show initPresent) (return ())
     unless initPresent (throwM NoInitFile)
-    dirContents <- trace "enumerate got dirContents" (liftIO $ listDirectory fp)
+    dirContents <- liftIO $ listDirectory fp
+    trace ("dirContents are: " <> show dirContents) (return ())
     subDirs <- trace "enumerate got the subDirs" (liftIO $ filterM doesDirectoryExist dirContents)
     files <- trace "enumerate got the files in the subDirs" (liftIO $ filterM doesFileExist dirContents)
     let pyFiles = filter (isSuffixOf ".py") files
@@ -509,11 +510,11 @@ enumerateSubmodules fp mn = do
     -- map enuerateASubDir :: [FilePath] -> [m [ModuleName]]
     -- sequence :: [m [ModuleName]] -> m [[ModuleName]]
     -- fmap concat :: m [[ModuleName]] -> m [ModuleName]
-    trace "got immediate submods" (return ())
+    trace ("got immediate submods: " <> show immediateSubmods) (return ())
     additionalSubmods <- fmap concat
                        . sequence
                        $ map enumerateASubDir subDirs
-    trace "got additional submods" (return ())
+    trace ("got additional submods: " <> show additionalSubmods) (return ())
     let output = immediateSubmods <> additionalSubmods
     trace (show output) (return output)
     where

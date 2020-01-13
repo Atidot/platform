@@ -13,6 +13,7 @@ let
     platform-kube
     platform-process
     platform-packaging
+    platform-packaging-types
     platform-visual
   ]);
 

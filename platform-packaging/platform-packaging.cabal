@@ -21,7 +21,6 @@ library
   exposed-modules:    Platform.Packaging
                     , Platform.Packaging.Pip
                     , Platform.Packaging.PythonImports
-  other-modules:      Platform.Packaging.Pip.Types
   -- other-extensions:
   build-depends:       base
                      , lens
@@ -42,6 +41,7 @@ library
                      , temporary
                      , exceptions
                      , platform-types
+                     , platform-packaging-types
                      , platform-dsl
   hs-source-dirs:      src
   default-language:    Haskell2010
