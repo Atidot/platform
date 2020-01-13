@@ -12,15 +12,17 @@ module Platform.Packaging.PythonImports
     , getAST
     ) where
 
+import           "base"            Debug.Trace (trace)
 import           "base"            Control.Monad.IO.Class (MonadIO, liftIO)
 import           "base"            Control.Monad (when, unless, filterM, zipWithM, sequence_)
 import           "base"            Data.Typeable (Typeable)
 import           "base"            Data.Data (Data)
-import           "base"            Data.List (foldl', intercalate, isSuffixOf, partition, sortBy)
+import           "base"            Data.List (foldl', intercalate, isSuffixOf, partition, sortBy, (\\))
+import           "base"            Data.Maybe (isJust, fromJust)
 import           "base"            GHC.Generics (Generic)
 import           "aeson"           Data.Aeson (FromJSON, ToJSON, toEncoding, genericToEncoding, defaultOptions)
 import           "data-default"    Data.Default (def)
-import           "fuzzyset"        Data.FuzzySet (fromList, get)
+import qualified "fuzzyset"        Data.FuzzySet as FS (fromList, get)
 import           "text"            Data.Text (Text, pack, unpack, replace, split)
 import qualified "text"            Data.Text as T
 import qualified "text"            Data.Text.IO as TIO
@@ -79,7 +81,7 @@ instance Show PythonImportException where
 
 instance Exception PythonImportException
 
-data PackageType
+data PackageFormat
     = TarPackage
     | WheelPackage
     deriving (Read, Eq, Ord, Bounded, Enum, Data, Typeable, Generic)
@@ -100,12 +102,12 @@ searchAndListNames :: (MonadCatch m, MonadIO m)
 searchAndListNames pkg = do
     let firstWordRegex = "^[^ ]+(?= )" :: String
     t <- catchAll (liftIO . search def def $ pkg) (const $ return "")
-    let matchSet = fromList
+    let matchSet = FS.fromList
                  . map pack
                  $ getAllTextMatches (unpack t =~ firstWordRegex :: AllTextMatches [] String)
     let rankedMatches = map snd
                       . sortBy comparePair
-                      . get matchSet
+                      . FS.get matchSet
                       $ pkg
     return rankedMatches
     where
@@ -147,8 +149,7 @@ findPossibleMatches :: (MonadCatch m, MonadIO m)
 findPossibleMatches mn = do
     pkgs <- fmap concat
           . sequence
-          . map ( searchAndListNames
-                . replace "." "-")
+          . map searchAndListNames
           $ concatenatedSubNames
     return $ map pypiPkg pkgs
     where
@@ -162,17 +163,22 @@ findMatch :: (MonadMask m, MonadIO m)
 findMatch mn pkgs = do
     candidates <- filterM filterCondition pkgs
     if null candidates
-       then return Nothing
-       else return . Just . head $ candidates
+       then trace ("failed to match on " <> show mn) (return Nothing)
+       else trace ("found match for " <> show mn <> ": " <> show (head candidates)) (return . return . head $ candidates)
     where
         filterCondition pkg = handleAll (\_ -> return False) (fmap (== PkgContainsModule) $ isModuleInPkg mn pkg)
 
 -- Non-recursive top-level search.
 -- The Maybe is here to fit the language-python API
 foreignImportedModules :: Statement annot -> [Maybe (DottedName annot)]
-foreignImportedModules i@Import{}     = map (return . import_item_name) . import_items $ i
+foreignImportedModules i@Import{}     = map (return . import_item_name)
+                                      . import_items
+                                      $ i
 foreignImportedModules i@FromImport{} = if 0 == (import_relative_dots $ from_module i)
-                                          then return . import_relative_module . from_module $ i
+                                          then return
+                                             . import_relative_module
+                                             . from_module
+                                             $ i
                                           else []
 foreignImportedModules _              = []
 
@@ -181,7 +187,10 @@ foreignImportedModules _              = []
 relativeImportedModules :: Statement annot -> [Maybe (DottedName annot)]
 relativeImportedModules i@FromImport{} = if 0 == (import_relative_dots $ from_module i)
                                             then []
-                                            else return . import_relative_module . from_module $ i
+                                            else return
+                                               . import_relative_module
+                                               . from_module
+                                               $ i
 relativeImportedModules _              = []
 
 onlyJust :: [Maybe a] -> [a]
@@ -248,51 +257,55 @@ runPythonImports :: (MonadMask m, MonadIO m)
                  => String
                  -> m ([(ModuleName, PyPkg)], [ModuleName])
 runPythonImports fileContents = do
-    importNames <- map dottedToModuleName . getForeignImportNames <$> getAST fileContents
-    explicitMatches <- mapM (getExplicitPkgOrigins . unpack . _moduleName) importNames
-    possibleMatches' <- mapM findPossibleMatches importNames
-    let possibleMatches = take 10 possibleMatches' --TODO: calibrate this
-    matches <- zipWithM findMatch importNames possibleMatches
-    return $ sortPairs (zip importNames matches)
+    unmatchedMods <- map dottedToModuleName
+                   . getForeignImportNames
+                 <$> getAST fileContents
+    explicitMatches <- getExplicitPkgOrigins fileContents
+    let unmatchedMods' = unmatchedMods \\ map fst explicitMatches
+    possibleMatches <- mapM findPossibleMatches unmatchedMods'
+    let possibleMatchesTruncated = map (take 10) possibleMatches --TODO: calibrate this
+    discoveredMatches <- zipWithM findMatch' unmatchedMods' possibleMatchesTruncated
+    let ms                = partition (isJust . snd) discoveredMatches
+    let successfulMatches = map (\(mn, pkg) -> (mn, fromJust pkg)) $ fst ms
+    let failedMatches     = map (\(mn, _) -> mn)                   $ snd ms
+    return (explicitMatches <> successfulMatches, failedMatches)
     where
-        -- This sorts matched pairs into the first tuple entry and unmatched
-        -- pairs into the second tuple entry.
-        sortPairs :: [(ModuleName, Maybe PyPkg)] -> ([(ModuleName, PyPkg)], [ModuleName])
-        sortPairs pairs = (\(_, ys, zs) -> (ys, zs)) $ sortPairs' (pairs, [], [])
-        sortPairs' ((m, Nothing) : xs, ys, zs) = sortPairs' (xs, ys, m : zs)
-        sortPairs' ((m, Just x) : xs, ys, zs) = sortPairs' (xs, (m, x) : ys, zs)
-        sortPairs' ([], ys, zs) = ([], ys, zs)
+        findMatch' unmatched possiblePkgs = do
+            output <- findMatch unmatched possiblePkgs
+            return (unmatched, output)
 
 isModuleInPkg :: (MonadMask m, MonadIO m)
               => ModuleName
               -> PyPkg
               -> m PkgVerdict
 isModuleInPkg modName pkg = handleAll (const . return $ Inconclusive) $
-    bracket init'
-            fini
-            body
+    trace ("is " <> show modName <> " in " <> show pkg <> "?") $ bracket init'
+                                                                         fini
+                                                                         body
     where
         init' = do
             originalDir <- liftIO getCurrentDirectory
             tmp <- liftIO getTemporaryDirectory
             dlDir <- liftIO . createTempDirectory tmp $ (unpack . _pyPkg_name $ pkg)
             liftIO $ setCurrentDirectory dlDir
-            return (originalDir, dlDir)
+            trace ("created dir " ++ show dlDir) (return (originalDir, dlDir))
 
         fini (originalDir, dlDir) = do
             liftIO . removeDirectoryRecursive $ dlDir
             liftIO $ setCurrentDirectory originalDir
+            trace ("deleted dir " ++ show dlDir) (return ())
 
         body (_, dlDir) = do
-            downloadPkg pkg
+            trace "entered body of isModuleInPkg" (downloadPkg pkg)
             downloadedPkg <- liftIO $ headIfLengthIsOne =<< listDirectory dlDir
+            trace ("downloaded package " ++ show downloadedPkg) (return ())
             pkgType <- determinePkgType downloadedPkg
             modulesInPkg <- if pkgType == TarPackage
                                then introspectWrapper tarAction dlDir
                                else introspectWrapper wheelAction dlDir
             if modName `elem` modulesInPkg
-               then return PkgContainsModule
-               else return PkgLacksModule
+               then trace "declaring that the package contains the module" (return PkgContainsModule)
+               else trace "declaring that the package lacks the module" (return PkgLacksModule)
 
         determinePkgType fp = do
             let isTar   = fp =~ tarRegex
@@ -316,27 +329,32 @@ downloadPkg pkg = do
 
 getExplicitPkgOrigins :: (MonadThrow m, MonadIO m)
                       => String
-                      -> m [([DottedName SrcSpan], PyPkg)]
+                      -> m [(ModuleName, PyPkg)]
 getExplicitPkgOrigins fileContents = do
     comments <- getComments fileContents
     let annotationFiltered = filter hasPkgAnnotation comments
     explicitPkgs <- filterM comesAfterImport annotationFiltered
-    mapM processPkgs explicitPkgs
+    fmap (map (\(dn, pkg) -> (dottedToModuleName dn, pkg))) $ mapM processPkgs explicitPkgs
     where
-        processPkgs :: (MonadThrow m, MonadIO m) => Token -> m ([DottedName SrcSpan], PyPkg)
+        processPkgs :: (MonadThrow m, MonadIO m) => Token -> m (DottedName SrcSpan, PyPkg)
         processPkgs tkn = do
             stmt <- stmtBeforeComment tkn
-            case stmt of
-              Nothing   -> throwM FileNotParseable
-              Just stmt -> return (getForeignImportNames $ Module [stmt], pkgFromToken tkn)
+            processed <- case stmt of
+                           Nothing   -> throwM FileNotParseable
+                           Just stmt -> headIfLengthIsOne
+                                      . getForeignImportNames
+                                      . Module
+                                      $ [stmt]
+            trace ("found that " <> show processed <> " has pkg token " <> show tkn) (return ())
+            return (processed, pkgFromToken tkn)
         comesAfterImport :: (MonadThrow m, MonadIO m) => Token -> m Bool
         comesAfterImport tkn = do
             stmt <- stmtBeforeComment tkn
             return . isImport $ stmt
         hasPkgAnnotation :: Token -> Bool
         hasPkgAnnotation tkn
-          = ((token_literal tkn) =~ explicitPkgRegex
-          || (token_literal tkn) =~ suppressPkgRegex)
+          = (token_literal tkn) =~ explicitPkgRegex
+         || (token_literal tkn) =~ suppressPkgRegex
         stmtBeforeComment :: (MonadThrow m, MonadIO m) => Token -> m (Maybe (Statement SrcSpan))
         stmtBeforeComment tkn = do
             file <- fileFromCommentLine tkn
@@ -423,16 +441,19 @@ wheelAction fp = do
     subdirs <- liftIO $ filterM doesDirectoryExist newContents
     let distDirs = filter (=~ ("\\.dist-info$" :: String)) subdirs
     distDir <- headIfLengthIsOne distDirs
+    srcDir <- headIfLengthIsOne $ subdirs \\ distDirs
     -- the next line might fail if the .whl file is poorly formed.
     topLevelModules <- liftIO
                      . fmap (map (\name -> ModuleName name))
                      . fmap T.lines
                      . TIO.readFile
                      $ distDir <> "/top_level.txt"
+    trace ("completed a wheel action in " <> show fp) (return ())
     fmap concat . sequence
-                . map (enumerateSubmodules fp)
+                . map (enumerateSubmodules srcDir)
                 $ topLevelModules
 
+-- TODO: debug this. Lower priority since most packages are in wheel format.
 tarAction :: (MonadCatch m, MonadIO m)
           => FilePath
           -> m [ModuleName]
@@ -449,17 +470,20 @@ tarAction fp = do
     eggInfoDirs <- liftIO
                  . fmap concat
                  . sequence
-                 . map (\dir -> fmap (lines . unpack) $ "find" $| [pack dir, "-name", "*egg-info"])
-                 $ subdirs -- [FilePath]
-                 --[FilePath] -> [IO Text] -> [IO [String]] -> IO [[String]] -> IO [String] -> m [String]
+                 . map (\dir -> fmap (filter (not . null)
+                                    . lines
+                                    . unpack)
+                              $ "find" $| [pack dir, "-regex", ".*egg-info"])
+                 $ subdirs
     eggInfoDir <- headIfLengthIsOne eggInfoDirs
-    dirAboveEggInfoDir <- liftIO
+    dirAboveEggInfoDir <- liftIO -- TODO this is probably an error; need to delete .egg-info from eggInfoDir instead
                         . canonicalizePath
                         $ eggInfoDir <> "/.."
     topLevelModules <- liftIO
                      . fmap (map ModuleName . T.lines)
                      . TIO.readFile
                      $ eggInfoDir <> "/top_level.txt"
+    trace ("completed a tar action in " <> show fp) (return ())
     fmap concat . sequence
                 . map (enumerateSubmodules dirAboveEggInfoDir)
                 $ topLevelModules
@@ -475,19 +499,23 @@ enumerateSubmodules :: (MonadCatch m, MonadIO m)
                     -> m [ModuleName]
 enumerateSubmodules fp mn = do
     initPresent <- containsInit fp
+    trace ("init present is considered " <> show initPresent) (return ())
     unless initPresent (throwM NoInitFile)
-    dirContents <- liftIO $ listDirectory fp
-    subDirs <- liftIO $ filterM doesDirectoryExist dirContents
-    files <- liftIO $ filterM doesFileExist dirContents
+    dirContents <- trace "enumerate got dirContents" (liftIO $ listDirectory fp)
+    subDirs <- trace "enumerate got the subDirs" (liftIO $ filterM doesDirectoryExist dirContents)
+    files <- trace "enumerate got the files in the subDirs" (liftIO $ filterM doesFileExist dirContents)
     let pyFiles = filter (isSuffixOf ".py") files
     let immediateSubmods = map moduleNameFromFilePath pyFiles
     -- map enuerateASubDir :: [FilePath] -> [m [ModuleName]]
     -- sequence :: [m [ModuleName]] -> m [[ModuleName]]
     -- fmap concat :: m [[ModuleName]] -> m [ModuleName]
+    trace "got immediate submods" (return ())
     additionalSubmods <- fmap concat
                        . sequence
                        $ map enumerateASubDir subDirs
-    return $ immediateSubmods <> additionalSubmods
+    trace "got additional submods" (return ())
+    let output = immediateSubmods <> additionalSubmods
+    trace (show output) (return output)
     where
         enumerateASubDir subDir =
             catchIf (== NoInitFile)
