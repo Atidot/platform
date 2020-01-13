@@ -98,6 +98,7 @@ toDocker (ContainerEnv os users img pkgs environment runCmds entrypoint' command
 installPkgs :: String
             -> [String]
             -> Docker ()
+installPkgs installer []   = return ()
 installPkgs installer pkgs = run installation
     where installation = foldl' (++) (installer ++ endl1) (map instLine pkgs)
           instLine pkg = "    " ++ pkg ++ endl pkg
