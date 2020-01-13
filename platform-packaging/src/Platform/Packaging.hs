@@ -56,11 +56,11 @@ data ContainerEnv
 makeLenses ''ContainerEnv
 
 instance Default ContainerEnv where
-    def = ContainerEnv Ubuntu 
-                       [Root] 
-                       "ubuntu:latest" 
-                       [] 
-                       empty 
+    def = ContainerEnv Ubuntu
+                       [Root]
+                       "ubuntu:latest"
+                       []
+                       empty
                        []
                        Nothing
                        Nothing
@@ -74,12 +74,12 @@ instance FromJSON ContainerEnv where
 -- I.e. "new" environment variables override old ones, and the new command
 -- overrides the old command. (The "newer" ContainerEnv is the right-hand one.)
 instance Semigroup ContainerEnv where
-    (<>) (ContainerEnv os1 users1 image1 insts1 env1 runs1 entry1 command1) 
+    (<>) (ContainerEnv os1 users1 image1 insts1 env1 runs1 entry1 command1)
          (ContainerEnv os2 users2 image2 insts2 env2 runs2 entry2 command2)
         = ContainerEnv os2
                        (users1 <> users2)
-                       image2 
-                       (insts1 <> insts2) 
+                       image2
+                       (insts1 <> insts2)
                        (env2 <> env1) -- Map prefers the left value
                        (runs1 <> runs2)
                        entry2
@@ -88,22 +88,15 @@ instance Semigroup ContainerEnv where
 toDocker :: ContainerEnv -> Docker ()
 toDocker (ContainerEnv os users img pkgs environment runCmds entrypoint' command) = do
     from img
-    foreach (makeUser os) users
-    foreach (uncurry installPkgs) pkgs
-    foreach (uncurry env) $ assocs environment
-    foreach run  runCmds
-    doIfJust (flip entrypoint []) entrypoint'
-    doIfJust cmd command
-        where doIfJust f Nothing = return ()
-              doIfJust f (Just x) = f x
-
-foreach :: (a -> Docker ()) 
-        -> [a] 
-        -> Docker ()
-foreach f xs = foldl' (>>) (return ()) (map f xs)
+    mapM_ (makeUser os)         users
+    mapM_ (uncurry installPkgs) pkgs
+    mapM_ (uncurry env)         (assocs environment)
+    mapM_ run                   runCmds
+    maybe (return ()) (flip entrypoint []) entrypoint'
+    maybe (return ()) cmd                  command
 
 installPkgs :: String
-            -> [String] 
+            -> [String]
             -> Docker ()
 installPkgs installer pkgs = run installation
     where installation = foldl' (++) (installer ++ endl1) (map instLine pkgs)
@@ -120,12 +113,12 @@ addUserProgram Ubuntu = "adduser"
 addUserProgram CentOS = "adduser"
 addUserProgram RedHat = "useradd"
 
-makeUser :: OS 
-         -> User 
+makeUser :: OS
+         -> User
          -> Docker ()
 makeUser _  Root         = return ()
 makeUser os (User uname) = do
     run (addUserProgram os ++ " " ++ uname)
     user uname
     workdir ("/home/" ++ uname)
-    env "PATH" "/home/atidot/.local/bin:${PATH}"
+    env "PATH" "/home/atidot/.local/bin:${PATH}" --TODO: look up the home directory.
