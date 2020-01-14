@@ -3,27 +3,28 @@
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE OverloadedStrings #-}
 module Main where
-import           "base"                    Data.Semigroup ((<>))
-import           "base"                    System.IO (stdin)
-import           "base"                    Data.Typeable (Typeable)
-import           "base"                    Data.Data (Data)
-import           "base"                    GHC.Generics (Generic)
-import           "base"                    System.IO
-import qualified "bytestring"              Data.ByteString.Lazy.Char8 as B8 (putStrLn)
-import           "data-default"            Data.Default (Default, def)
-import           "dockerfile"              Data.Docker
-import           "containers"              Data.Map.Strict (empty)
-import           "text"                    Data.Text (unpack)
-import           "mtl"                     Control.Monad.State (execStateT, evalStateT)
-import           "optparse-generic"        Options.Generic
-import           "directory"               System.Directory (getCurrentDirectory)
-import           "language-python"         Language.Python.Common.Pretty (Pretty, pretty)
-import           "language-python"         Language.Python.Common.PrettyAST ()
-import           "platform-types"          Platform.Types
-import           "platform-dsl"            Platform.DSL
-import qualified "platform-dsl"            Platform.DSL as DSL (test)
-import           "platform-packaging"      Platform.Packaging
-import           "platform-packaging"      Platform.Packaging.PythonImports
+import           "base"                     Data.Semigroup ((<>))
+import           "base"                     System.IO (stdin)
+import           "base"                     Data.Typeable (Typeable)
+import           "base"                     Data.Data (Data)
+import           "base"                     GHC.Generics (Generic)
+import           "base"                     System.IO
+import qualified "bytestring"               Data.ByteString.Lazy.Char8 as B8 (putStrLn)
+import           "data-default"             Data.Default (Default, def)
+import           "dockerfile"               Data.Docker
+import           "containers"               Data.Map.Strict (empty)
+import           "text"                     Data.Text (unpack)
+import           "mtl"                      Control.Monad.State (execStateT, evalStateT)
+import           "optparse-generic"         Options.Generic
+import           "directory"                System.Directory (getCurrentDirectory)
+import           "language-python"          Language.Python.Common.Pretty (Pretty, pretty)
+import           "language-python"          Language.Python.Common.PrettyAST ()
+import           "platform-types"           Platform.Types
+import           "platform-dsl"             Platform.DSL
+import qualified "platform-dsl"             Platform.DSL as DSL (test)
+import           "platform-packaging"       Platform.Packaging
+import           "platform-packaging"       Platform.Packaging.PythonImports
+import           "platform-packaging-types" Platform.Packaging.Types
 
 data CLI
     = PyToDocker
@@ -71,9 +72,7 @@ pyToDocker module' = do
 
 printAST :: String -> IO ()
 printAST module' = do
-    ast <- id --fmap (show . pretty)
-         . getAST
-         $ module'
+    ast <- getAST module'
     putStrLn . show $ ast
 
 printImports :: String -> IO ()

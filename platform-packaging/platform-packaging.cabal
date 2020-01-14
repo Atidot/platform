@@ -76,5 +76,6 @@ executable platform-packaging
                      , platform-types
                      , platform-dsl
                      , platform-packaging
+                     , platform-packaging-types
   hs-source-dirs:      app
   default-language:    Haskell2010

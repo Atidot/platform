@@ -11,10 +11,6 @@ import "language-python" Language.Python.Common.AST
 import "language-python" Language.Python.Common.SrcLocation
 import "language-python" Language.Python.Version3.Parser (parseModule)
 
--- findEntrypoint should find a SpanMultiLine or a SpanCoLinear
-findEntrypoints :: String -> SrcSpan
-findEntrypoint = undefined
-
 isEntrypoint :: String -> SrcSpan -> Bool
 isEntrypoint contents span
   = case parseModule (subsection contents span) of
@@ -75,6 +71,3 @@ take' = lengthCheck take
 
 drop' :: Int -> Maybe [a] -> Maybe [a]
 drop' = lengthCheck drop
-
-generateMain :: String -> Maybe String
-generateMain = undefined
