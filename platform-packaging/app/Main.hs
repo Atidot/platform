@@ -15,7 +15,7 @@ import           "dockerfile"              Data.Docker
 import           "containers"              Data.Map.Strict (empty)
 import           "text"                    Data.Text (unpack)
 import           "mtl"                     Control.Monad.State (execStateT, evalStateT)
-import           "optparse-applicative"    Options.Applicative (Parser, strOption, long, metavar, help, header, fullDesc, helper, progDesc, info, execParser, (<**>))
+import           "optparse-generic"        Options.Generic
 import           "directory"               System.Directory (getCurrentDirectory)
 import           "language-python"         Language.Python.Common.Pretty (Pretty, pretty)
 import           "language-python"         Language.Python.Common.PrettyAST ()
@@ -25,32 +25,34 @@ import qualified "platform-dsl"            Platform.DSL as DSL (test)
 import           "platform-packaging"      Platform.Packaging
 import           "platform-packaging"      Platform.Packaging.PythonImports
 
-data InFile = InFile
-    { location :: !FilePath }
-    deriving (Show, Read, Eq, Ord, Data, Typeable, Generic)
+data CLI
+    = PyToDocker
+    { infile :: String
+    }
+    | CatDocker
+    { infile :: String
+    }
+    | PrintAST
+    { infile :: String
+    } deriving (Generic, Show)
 
-infile :: Parser InFile
-infile = InFile
-      <$> strOption
-          ( long "infile"
-         <> metavar "INPUT_FILE"
-         <> help "An input Python file." )
+instance ParseRecord CLI
 
 main :: IO ()
-main = processFile printImports =<< execParser opts
-    where opts = info (infile <**> helper)
-                 (fullDesc
-                 <> progDesc "Print a Dockerfile that can run the input Python file."
-                 <> header   "platform-packaging - currently a simplified test version.")
+main = getRecord "Platform Packaging" >>= runScript
 
-processFile :: (String -> IO ()) -> InFile -> IO ()
-processFile f inFile = do
-    handle <- openFile (location inFile) ReadMode
+runScript :: CLI -> IO ()
+runScript p@PyToDocker{} = ioWrapper pyToDocker $ infile p
+runScript a@PrintAST{}   = ioWrapper printAST   $ infile a
+
+ioWrapper :: (String -> IO ()) -> String -> IO ()
+ioWrapper f inFile = do
+    handle <- openFile inFile ReadMode
     contents <- hGetContents handle
     f contents
 
-catDocker :: String -> IO ()
-catDocker module' = do
+pyToDocker :: String -> IO ()
+pyToDocker module' = do
     pipModulesForInstall <- fmap (map (unpack . _pyPkg_name . snd) . fst)
                           . runPythonImports
                           $ module'

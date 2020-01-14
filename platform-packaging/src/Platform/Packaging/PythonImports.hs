@@ -58,9 +58,6 @@ instance FromJSON PyPkg where
 data ModuleName = ModuleName { _moduleName :: !Text }
     deriving (Show, Read, Eq, Ord, Data, Typeable, Generic)
 
-addSubmodule :: ModuleName -> Text -> ModuleName
-addSubmodule mn t = ModuleName $ _moduleName mn <> "." <> t
-
 instance ToJSON ModuleName where
     toEncoding = genericToEncoding defaultOptions
 
@@ -71,6 +68,7 @@ data PythonImportException
     | FileNotParseable
     | ImpossibleFileState
     | NoInitFile
+    | NoTopLevelFile
     | NoSuchFile
     | MultipleSuchFiles
     deriving (Read, Eq, Ord, Bounded, Enum, Data, Typeable, Generic)
@@ -92,7 +90,7 @@ data PkgVerdict
     | Inconclusive
     deriving (Show, Read, Eq, Ord, Enum, Bounded, Typeable, Data, Generic)
 
-makeLenses ''InstallOpts
+makeLenses ''GeneralOpts
 makeLenses ''DownloadOpts
 makeLenses ''PipInput
 
@@ -161,7 +159,7 @@ findMatch :: (MonadMask m, MonadIO m)
           -> [PyPkg]
           -> m (Maybe PyPkg)
 findMatch mn pkgs = do
-    candidates <- filterM filterCondition pkgs
+    candidates <- trace ("finding match for" <> show mn) (filterM filterCondition pkgs)
     if null candidates
        then trace ("failed to match on " <> show mn) (return Nothing)
        else trace ("found match for " <> show mn <> ": " <> show (head candidates)) (return . return . head $ candidates)
@@ -279,24 +277,23 @@ isModuleInPkg :: (MonadMask m, MonadIO m)
               -> PyPkg
               -> m PkgVerdict
 isModuleInPkg modName pkg = handleAll (const . return $ Inconclusive) $
-    trace ("is " <> show modName <> " in " <> show pkg <> "?") $ bracket init'
-                                                                         fini
-                                                                         body
+    bracket init'
+            fini
+            body
     where
         init' = do
             originalDir <- liftIO getCurrentDirectory
             tmp <- liftIO getTemporaryDirectory
             dlDir <- liftIO . createTempDirectory tmp $ (unpack . _pyPkg_name $ pkg)
             liftIO $ setCurrentDirectory dlDir
-            trace ("created dir " ++ show dlDir) (return (originalDir, dlDir))
+            return (originalDir, dlDir)
 
         fini (originalDir, dlDir) = do
             liftIO . removeDirectoryRecursive $ dlDir
             liftIO $ setCurrentDirectory originalDir
-            trace ("deleted dir " ++ show dlDir) (return ())
 
         body (_, dlDir) = do
-            trace "entered body of isModuleInPkg" (downloadPkg pkg)
+            downloadPkg pkg
             downloadedPkg <- liftIO $ headIfLengthIsOne =<< listDirectory dlDir
             trace ("downloaded package " ++ show downloadedPkg) (return ())
             pkgType <- determinePkgType downloadedPkg
@@ -320,10 +317,11 @@ downloadPkg :: (MonadCatch m, MonadIO m)
             => PyPkg
             -> m ()
 downloadPkg pkg = do
-    liftIO $ download def dlOpts dlInput
+    liftIO $ download genOpts dlOpts dlInput
     return ()
     where
-        dlOpts = set downloadOpts_noDeps (Just True) def
+        genOpts = set generalOpts_quiet   (Just True) def
+        dlOpts =  set downloadOpts_noDeps (Just True) def
         dlInput = ReqSpecInput [ReqSpec (_pyPkg_name pkg) Nothing]
              --  set downloadOpts_index  (Just $ _pyPkg_index pkg) . set downloadOpts_noDeps (Just True) $ def
 
@@ -381,8 +379,8 @@ explicitPkgRegex = "(?<=!platform )(\\w|\\d)(\\w|\\d|-)*(?=( |\\t)*$)"
 suppressPkgRegex :: String
 suppressPkgRegex = "(?<=!platform)(?=( |\\t)*$)"
 
-dropUntilFinalSlashRegex :: String
-dropUntilFinalSlashRegex = "[^\\/]+$"
+getPythonFileNameRegex :: String
+getPythonFileNameRegex = "[^\\/]+(?=.py$)"
 
 tarRegex :: String
 tarRegex = "\\.tar\\.gz$"
@@ -439,19 +437,20 @@ wheelAction fp = do
                   . listDirectory
                   $ fp
     subdirs <- liftIO $ filterM doesDirectoryExist newContents
-    let distDirs = filter (=~ ("\\.dist-info$" :: String)) subdirs
+    let distDirs = filter (=~ ("\\.dist-info/?$" :: String)) subdirs
     distDir <- headIfLengthIsOne distDirs
-    srcDir <- headIfLengthIsOne $ subdirs \\ distDirs
-    -- the next line might fail if the .whl file is poorly formed.
-    topLevelModules <- liftIO
-                     . fmap (map (\name -> ModuleName name))
-                     . fmap T.lines
-                     . TIO.readFile
-                     $ distDir <> "/top_level.txt"
-    trace ("completed a wheel action in " <> show fp) (return ())
-    fmap concat . sequence
-                . map (enumerateSubmodules srcDir)
-                $ topLevelModules
+    topLevelFileExists <- liftIO . doesFileExist $ distDir <> "/top_level.txt"
+    unless topLevelFileExists (throwM NoTopLevelFile)
+    topLevelModuleNames <- liftIO
+                         . fmap T.lines
+                         . TIO.readFile
+                         $ distDir <> "/top_level.txt"
+    let topLevelModules     = map ModuleName                      topLevelModuleNames
+    let topLevelModulePaths = map (\mn -> fp <> "/" <> unpack mn) topLevelModuleNames
+    subModules <- fmap concat
+                . sequence
+                $ map enumerateSubmodules topLevelModulePaths
+    trace ("modules are: " <> show (topLevelModules <> subModules)) (return $ topLevelModules <> subModules)
 
 -- TODO: debug this. Lower priority since most packages are in wheel format.
 tarAction :: (MonadCatch m, MonadIO m)
@@ -483,10 +482,12 @@ tarAction fp = do
                      . fmap (map ModuleName . T.lines)
                      . TIO.readFile
                      $ eggInfoDir <> "/top_level.txt"
-    trace ("completed a tar action in " <> show fp) (return ())
-    fmap concat . sequence
-                . map (enumerateSubmodules dirAboveEggInfoDir)
-                $ topLevelModules
+    trace ("got these toplevel modules: " <> show topLevelModules) (return ())
+    out <- undefined
+    --                     fmap concat . sequence
+    --                   . map (enumerateSubmodules dirAboveEggInfoDir)
+    --                   $ topLevelModules
+    trace ("completed a tar action in " <> show fp) (return out)
 
 containsInit :: (MonadThrow m, MonadIO m)
             => FilePath
@@ -495,36 +496,31 @@ containsInit fp = liftIO . doesFileExist $ fp <> "/__init__.py"
 
 enumerateSubmodules :: (MonadCatch m, MonadIO m)
                     => FilePath
-                    -> ModuleName
                     -> m [ModuleName]
-enumerateSubmodules fp mn = do
+enumerateSubmodules fp = do
     initPresent <- containsInit fp
     trace ("init present is considered " <> show initPresent) (return ())
     unless initPresent (throwM NoInitFile)
-    dirContents <- liftIO $ listDirectory fp
-    trace ("dirContents are: " <> show dirContents) (return ())
-    subDirs <- trace "enumerate got the subDirs" (liftIO $ filterM doesDirectoryExist dirContents)
-    files <- trace "enumerate got the files in the subDirs" (liftIO $ filterM doesFileExist dirContents)
+    dirContents <- liftIO
+                 . fmap (map (\f -> fp <> "/" <> f))
+                 . listDirectory
+                 $ fp
+    subDirs <- liftIO $ filterM doesDirectoryExist dirContents
+    files <- liftIO $ filterM doesFileExist dirContents
     let pyFiles = filter (isSuffixOf ".py") files
     let immediateSubmods = map moduleNameFromFilePath pyFiles
-    -- map enuerateASubDir :: [FilePath] -> [m [ModuleName]]
-    -- sequence :: [m [ModuleName]] -> m [[ModuleName]]
-    -- fmap concat :: m [[ModuleName]] -> m [ModuleName]
-    trace ("got immediate submods: " <> show immediateSubmods) (return ())
     additionalSubmods <- fmap concat
                        . sequence
                        $ map enumerateASubDir subDirs
-    trace ("got additional submods: " <> show additionalSubmods) (return ())
-    let output = immediateSubmods <> additionalSubmods
-    trace (show output) (return output)
+    return $ immediateSubmods <> additionalSubmods
     where
-        enumerateASubDir subDir =
-            catchIf (== NoInitFile)
-                    (enumerateSubmodules subDir (moduleNameFromFilePath subDir))
-                    (const . return $ [])
-        moduleNameFromFilePath fp = addSubmodule mn
+        enumerateASubDir subDir = catchIf (== NoInitFile)
+                                          (enumerateSubmodules subDir)
+                                          (const . return $ [])
+        moduleNameFromFilePath fp = ModuleName
+                                  . replace "/" "."
                                   . pack
-                                  $ (fp =~ dropUntilFinalSlashRegex)
+                                  $ fp =~ (".*(?=.py$)" :: String)
 
 readInit :: (MonadThrow m, MonadIO m)
          => FilePath

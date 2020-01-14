@@ -69,7 +69,7 @@ executable platform-packaging
                      , directory
                      , dockerfile
                      , aeson
-                     , optparse-applicative
+                     , optparse-generic
                      , text
                      , mtl
                      , language-python
