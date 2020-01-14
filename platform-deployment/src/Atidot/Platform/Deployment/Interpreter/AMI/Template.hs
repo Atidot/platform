@@ -15,7 +15,9 @@ toTemplate :: String -> Template SourcePos
 toTemplate template = either (error . show) id . runIdentity $
     parseGinger nullResolver Nothing template
 
-renderProvider :: TerraformConfig -> String -> Text
+renderProvider :: TerraformConfig
+               -> String
+               -> Text
 renderProvider config template = do
     let ctx :: GVal (Run SourcePos (Writer Text) Text)
         ctx = toCtx config
@@ -163,7 +165,6 @@ resource "aws_s3_bucket" "{{s3BucketName}}" {
   acl    = "private"
 }
   |]
-
 
 awsEbsVolume :: String
 awsEbsVolume = [r|

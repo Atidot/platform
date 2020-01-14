@@ -51,7 +51,10 @@ egressAll = EgressRuleParams
 (=:) = M.singleton
 
 -- to be added declaratively and replace the comment in line 20
-cidrSubnet :: AwsId AwsSubnet -> Int -> Int -> String
+cidrSubnet :: AwsId AwsSubnet
+           -> Int
+           -> Int
+           -> String
 cidrSubnet = undefined
 
 mkDep :: IO ()

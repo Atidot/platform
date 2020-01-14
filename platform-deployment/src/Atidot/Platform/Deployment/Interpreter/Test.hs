@@ -12,7 +12,9 @@ data TestConfig =
     TestConfig
 
 
-runTest :: TestConfig -> DeploymentM a -> IO ()
+runTest :: TestConfig
+        -> DeploymentM a
+        -> IO ()
 runTest config dep = do
     _ <-  (runStateT (iterM run dep) config)
     return ()

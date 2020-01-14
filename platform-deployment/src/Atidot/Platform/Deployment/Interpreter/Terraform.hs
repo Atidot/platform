@@ -89,7 +89,9 @@ updateExec :: (MonadState TerraformExtendedConfig m, Foldable t)
            -> m ()
 updateExec cmd = modify $ \s -> s{ _TerraformExtendedConfig_instanceExec = _TerraformExtendedConfig_instanceExec s <> addCmd cmd}
 
-addCmd :: (Foldable t, Semigroup a, IsString a) => t a -> [a]
+addCmd :: (Foldable t, Semigroup a, IsString a)
+       => t a
+       -> [a]
 addCmd cmd = [foldl1 (\x y -> x <> " " <> y) cmd]
 
 attachDockerFolder :: MonadState TerraformExtendedConfig m

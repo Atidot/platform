@@ -54,9 +54,9 @@ hello = do
 
 nsss :: DeploymentM ()
 nsss = do
-    s <- secret placeHolderSecret     -- declares secret that already exists in aws secrets manager
-    dir <- mount placeHolderData                               -- declares the mounting of volume data into the machine
-    c <- container placeHolderContainer                      -- declares the container running hello world
+    s <- secret placeHolderSecret         -- declares secret that already exists in aws secrets manager
+    dir <- mount placeHolderData          -- declares the mounting of volume data into the machine
+    c <- container placeHolderContainer   -- declares the container running hello world
     attachSecret s c                      -- attaches secret to the container
     attachVolume dir c                    -- attaches the volume to the container also
     execute [] c []                       -- executes the program inside the container
