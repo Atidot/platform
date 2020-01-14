@@ -16,18 +16,26 @@ rec {
     rev = "64e7bfb3abcad278e6160cd411abdd21a485a671";
   };
 
+  terraformHsSrc = fetchGit {
+    url = https://github.com/atidot/terraform-hs;
+    rev = "4815301f4d5cf8343907ea55e41f4f491930dc69";
+  };
+
   platformTypesSrc          = ../platform-types;
   platformDSLSrc            = ../platform-dsl;
   platformAWSSrc            = ../platform-aws;
   platformKubeSrc           = ../platform-kube;
   platformProcessSrc        = ../platform-process;
   platformPackagingSrc      = ../platform-packaging;
-  platformPackagingTypesSrc = ../platform-packaging-types;
+  platformPackagingTypesSrc = ../platform-packaging;
   platformVisualSrc         = ../platform-visual;
+  platformTerraformSrc      = ../platform-terraform;
+  platformDeploymentSrc     = ../platform-deployment;
 
   projectPackages = hspkgs: {
     language-python          = ease hspkgs.language-python;
     stratosphere             = hspkgs.callCabal2nix "stratosphere"             "${stratosphereSrc}" {};
+    terraform-hs             = hspkgs.callCabal2nix "terraform-hs"             "${terraformHsSrc}"  {};
     platform-types           = hspkgs.callCabal2nix "platform-types"           "${platformTypesSrc}" {};
     platform-dsl             = hspkgs.callCabal2nix "platform-dsl"             "${platformDSLSrc}" {};
     platform-aws             = hspkgs.callCabal2nix "platform-aws"             "${platformAWSSrc}" {};
@@ -36,6 +44,8 @@ rec {
     platform-packaging-types = hspkgs.callCabal2nix "platform-packaging-types" "${platformPackagingTypesSrc}" {};
     platform-process         = hspkgs.callCabal2nix "platform-process"         "${platformProcessSrc}" {};
     platform-visual          = hspkgs.callCabal2nix "platform-visual"          "${platformVisualSrc}" {};
+    platform-terraform       = hspkgs.callCabal2nix "platform-terraform"       "${platformTerraformSrc}" {};
+    platform-deployment      = hspkgs.callCabal2nix "platform-deployment"      "${platformDeploymentSrc}" {};
   };
 
   packages = haskellPackages.override (old: {
