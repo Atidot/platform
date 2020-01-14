@@ -14,6 +14,8 @@ let
     platform-process
     platform-packaging
     platform-visual
+    platform-terraform
+    platform-deployment
   ]);
 
 in
