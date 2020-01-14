@@ -55,7 +55,7 @@ instance Default GeneralOpts where
                       Nothing
                       Nothing
                       Nothing
-                      Nothing
+                      (Just True) -- Disables pip version check warning messages
                       Nothing
 
 instance Opts GeneralOpts where
