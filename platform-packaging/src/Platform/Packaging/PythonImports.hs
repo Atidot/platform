@@ -449,7 +449,7 @@ wheelAction fp = do
     let topLevelModulePaths = map (\mn -> fp <> "/" <> unpack mn) topLevelModuleNames
     subModules <- fmap concat
                 . sequence
-                $ map enumerateSubmodules topLevelModulePaths
+                $ map (enumerateSubmodules (fp <> "/")) topLevelModulePaths
     trace ("modules are: " <> show (topLevelModules <> subModules)) (return $ topLevelModules <> subModules)
 
 -- TODO: debug this. Lower priority since most packages are in wheel format.
@@ -495,9 +495,10 @@ containsInit :: (MonadThrow m, MonadIO m)
 containsInit fp = liftIO . doesFileExist $ fp <> "/__init__.py"
 
 enumerateSubmodules :: (MonadCatch m, MonadIO m)
-                    => FilePath
+                    => FilePath -- The common prefix to be deleted
+                    -> FilePath -- The location of the module
                     -> m [ModuleName]
-enumerateSubmodules fp = do
+enumerateSubmodules root fp = do
     initPresent <- containsInit fp
     trace ("init present is considered " <> show initPresent) (return ())
     unless initPresent (throwM NoInitFile)
@@ -515,12 +516,12 @@ enumerateSubmodules fp = do
     return $ immediateSubmods <> additionalSubmods
     where
         enumerateASubDir subDir = catchIf (== NoInitFile)
-                                          (enumerateSubmodules subDir)
+                                          (enumerateSubmodules root subDir)
                                           (const . return $ [])
         moduleNameFromFilePath fp = ModuleName
                                   . replace "/" "."
                                   . pack
-                                  $ fp =~ (".*(?=.py$)" :: String)
+                                  $ fp =~ ("(?<=" <> root <> ").*(?=.py$)" :: String)
 
 readInit :: (MonadThrow m, MonadIO m)
          => FilePath
