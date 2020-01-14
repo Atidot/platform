@@ -15,6 +15,21 @@ extra-source-files:  CHANGELOG.md
 
 library
   exposed-modules: Platform.Packaging.Pip.Types
+  other-modules:   Platform.Packaging.Pip.Types.Utils
+                 , Platform.Packaging.Pip.Types.Check
+                 , Platform.Packaging.Pip.Types.Debug
+                 , Platform.Packaging.Pip.Types.Config
+                 , Platform.Packaging.Pip.Types.Download
+                 , Platform.Packaging.Pip.Types.Freeze
+                 , Platform.Packaging.Pip.Types.GeneralOpts
+                 , Platform.Packaging.Pip.Types.Hash
+                 , Platform.Packaging.Pip.Types.Input
+                 , Platform.Packaging.Pip.Types.Install
+                 , Platform.Packaging.Pip.Types.List
+                 , Platform.Packaging.Pip.Types.Search
+                 , Platform.Packaging.Pip.Types.Show
+                 , Platform.Packaging.Pip.Types.Uninstall
+                 , Platform.Packaging.Pip.Types.Wheel
   -- other-extensions:
   build-depends:       base
                      , lens

@@ -41,8 +41,6 @@ import           "shellmet"                 Shellmet
 import           "platform-packaging-types" Platform.Packaging.Pip.Types
 import                                      Platform.Packaging.Pip
 
-type URL = Text
-
 data PyPkg
     = PyPkg
     { _pyPkg_index :: !URL
