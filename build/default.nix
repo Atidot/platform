@@ -30,6 +30,7 @@ stdenv.mkDerivation rec {
     haskellEnv
     nixpkgs.unzip
     nixpkgs.gnutar
+    python37Packages.python
     python37Packages.pip
     python37Packages.virtualenv
   ];

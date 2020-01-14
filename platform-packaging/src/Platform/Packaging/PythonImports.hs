@@ -12,7 +12,6 @@ module Platform.Packaging.PythonImports
     , getAST
     ) where
 
-import           "base"                     Debug.Trace (trace)
 import           "base"                     Control.Monad.IO.Class (MonadIO, liftIO)
 import           "base"                     Control.Monad (when, unless, filterM, zipWithM, sequence_)
 import           "base"                     Data.Typeable (Typeable)
@@ -159,10 +158,10 @@ findMatch :: (MonadMask m, MonadIO m)
           -> [PyPkg]
           -> m (Maybe PyPkg)
 findMatch mn pkgs = do
-    candidates <- trace ("finding match for" <> show mn) (filterM filterCondition pkgs)
+    candidates <- filterM filterCondition pkgs
     if null candidates
-       then trace ("failed to match on " <> show mn) (return Nothing)
-       else trace ("found match for " <> show mn <> ": " <> show (head candidates)) (return . return . head $ candidates)
+       then return Nothing
+       else return . return . head $ candidates
     where
         filterCondition pkg = handleAll (\_ -> return False) (fmap (== PkgContainsModule) $ isModuleInPkg mn pkg)
 
@@ -295,14 +294,13 @@ isModuleInPkg modName pkg = handleAll (const . return $ Inconclusive) $
         body (_, dlDir) = do
             downloadPkg pkg
             downloadedPkg <- liftIO $ headIfLengthIsOne =<< listDirectory dlDir
-            trace ("downloaded package " ++ show downloadedPkg) (return ())
             pkgType <- determinePkgType downloadedPkg
             modulesInPkg <- if pkgType == TarPackage
                                then introspectWrapper tarAction dlDir
                                else introspectWrapper wheelAction dlDir
             if modName `elem` modulesInPkg
-               then trace "declaring that the package contains the module" (return PkgContainsModule)
-               else trace "declaring that the package lacks the module" (return PkgLacksModule)
+               then return PkgContainsModule
+               else return PkgLacksModule
 
         determinePkgType fp = do
             let isTar   = fp =~ tarRegex
@@ -343,7 +341,6 @@ getExplicitPkgOrigins fileContents = do
                                       . getForeignImportNames
                                       . Module
                                       $ [stmt]
-            trace ("found that " <> show processed <> " has pkg token " <> show tkn) (return ())
             return (processed, pkgFromToken tkn)
         comesAfterImport :: (MonadThrow m, MonadIO m) => Token -> m Bool
         comesAfterImport tkn = do
@@ -450,7 +447,7 @@ wheelAction fp = do
     subModules <- fmap concat
                 . sequence
                 $ map (enumerateSubmodules (fp <> "/")) topLevelModulePaths
-    trace ("modules are: " <> show (topLevelModules <> subModules)) (return $ topLevelModules <> subModules)
+    return $ topLevelModules <> subModules
 
 -- TODO: debug this. Lower priority since most packages are in wheel format.
 tarAction :: (MonadCatch m, MonadIO m)
@@ -482,12 +479,11 @@ tarAction fp = do
                      . fmap (map ModuleName . T.lines)
                      . TIO.readFile
                      $ eggInfoDir <> "/top_level.txt"
-    trace ("got these toplevel modules: " <> show topLevelModules) (return ())
     out <- undefined
     --                     fmap concat . sequence
     --                   . map (enumerateSubmodules dirAboveEggInfoDir)
     --                   $ topLevelModules
-    trace ("completed a tar action in " <> show fp) (return out)
+    return out
 
 containsInit :: (MonadThrow m, MonadIO m)
             => FilePath
@@ -500,7 +496,6 @@ enumerateSubmodules :: (MonadCatch m, MonadIO m)
                     -> m [ModuleName]
 enumerateSubmodules root fp = do
     initPresent <- containsInit fp
-    trace ("init present is considered " <> show initPresent) (return ())
     unless initPresent (throwM NoInitFile)
     dirContents <- liftIO
                  . fmap (map (\f -> fp <> "/" <> f))

@@ -94,7 +94,5 @@ debug :: GeneralOpts
       -> IO Text
 debug gOpts opts = pip $ "debug" : fmtOpts gOpts ++ fmtOpts opts
 
--- TODO: fail gracefully when pip3 is not installed.
--- and/or allow for the correct pip installation to be configurable.
 pip :: [Text] -> IO Text
-pip = ($|) "pip3"
+pip cmds = "pip3" $| cmds
