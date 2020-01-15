@@ -10,6 +10,7 @@ module Platform.Packaging.PythonImports
     , PythonImportException
     , runPythonImports
     , getAST
+    , containsInit
     ) where
 
 import           "base"                     Control.Monad.IO.Class (MonadIO, liftIO)
