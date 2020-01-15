@@ -27,7 +27,7 @@ rec {
   platformKubeSrc           = ../platform-kube;
   platformProcessSrc        = ../platform-process;
   platformPackagingSrc      = ../platform-packaging;
-  platformPackagingTypesSrc = ../platform-packaging;
+  platformPackagingTypesSrc = ../platform-packaging-types;
   platformVisualSrc         = ../platform-visual;
   platformTerraformSrc      = ../platform-terraform;
   platformDeploymentSrc     = ../platform-deployment;
