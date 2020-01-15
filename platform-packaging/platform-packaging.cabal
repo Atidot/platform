@@ -19,20 +19,29 @@ extra-source-files:  CHANGELOG.md
 
 library
   exposed-modules:    Platform.Packaging
-  -- other-modules:
+                    , Platform.Packaging.Pip
+                    , Platform.Packaging.PythonImports
   -- other-extensions:
   build-depends:       base
                      , lens
                      , aeson
                      , data-default
+                     , extra
                      , text
                      , free
+                     , fuzzyset
                      , containers
+                     , directory
+                     , language-python
+                     , regex-pcre
                      , shelly
+                     , shellmet
                      , dockerfile
                      , mtl
+                     , temporary
                      , exceptions
                      , platform-types
+                     , platform-packaging-types
                      , platform-dsl
   hs-source-dirs:      src
   default-language:    Haskell2010
@@ -55,12 +64,18 @@ executable platform-packaging
   -- other-extensions:
   build-depends:       base
                      , bytestring
+                     , containers
                      , data-default
+                     , directory
+                     , dockerfile
                      , aeson
-                     , optparse-applicative
+                     , optparse-generic
+                     , text
                      , mtl
+                     , language-python
                      , platform-types
                      , platform-dsl
                      , platform-packaging
+                     , platform-packaging-types
   hs-source-dirs:      app
   default-language:    Haskell2010

@@ -13,6 +13,7 @@ let
     platform-kube
     platform-process
     platform-packaging
+    platform-packaging-types
     platform-visual
     platform-terraform
     platform-deployment
@@ -29,5 +30,10 @@ stdenv.mkDerivation rec {
 
   buildInputs = [
     haskellEnv
+    nixpkgs.unzip
+    nixpkgs.gnutar
+    python37Packages.python
+    python37Packages.pip
+    python37Packages.virtualenv
   ];
 }
