@@ -104,6 +104,7 @@ test-suite platform-deployment-test
     , exceptions
     , free
     , ginger
+    , hspec
     , mtl
     , optparse-generic
     , platform-deployment
