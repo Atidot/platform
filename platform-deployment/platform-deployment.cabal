@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: ef0b6438b7d4b768f3ef97c954b6531aa6e4dc9edfd31475471f2c3597164f75
+-- hash: 42d4529fb18f7b3659536c3b77397f4492971099bf297e4b4677e00d1729795c
 
 name:           platform-deployment
 version:        0.1.0.0
@@ -49,6 +49,8 @@ library
     , data-default
     , directory
     , exceptions
+    , extra
+    , filepath
     , free
     , ginger
     , mtl
@@ -75,6 +77,8 @@ executable packaging-deployment
     , data-default
     , directory
     , exceptions
+    , extra
+    , filepath
     , free
     , ginger
     , mtl
@@ -102,6 +106,8 @@ executable platform-deployment
     , data-default
     , directory
     , exceptions
+    , extra
+    , filepath
     , free
     , ginger
     , mtl
@@ -129,6 +135,8 @@ test-suite platform-deployment-test
     , data-default
     , directory
     , exceptions
+    , extra
+    , filepath
     , free
     , ginger
     , mtl

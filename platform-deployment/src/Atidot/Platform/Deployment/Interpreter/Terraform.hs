@@ -3,10 +3,13 @@ module Atidot.Platform.Deployment.Interpreter.Terraform where
 
 import qualified "text"       Data.Text as T
 import           "base"       Data.Maybe
-import           "exceptions" Control.Monad.Catch --(catch, bracket)
+import           "extra"      Data.Tuple.Extra
+import           "directory"  System.Directory
+import           "exceptions" Control.Monad.Catch
 import           "free"       Control.Monad.Free
 import           "mtl"        Control.Monad.State
-import           "turtle"     Turtle hiding (x, s, d)
+import           "turtle"     Turtle hiding (x, s, d,FilePath, fp)
+import           "filepath"   System.FilePath
 import qualified "containers" Data.Map as M
 
 import       Atidot.Platform.Deployment.Interpreter.Utils
@@ -37,9 +40,16 @@ runTerraform config dep =
         run :: Deployment (StateT TerraformExtendedConfig IO a)
             -> StateT TerraformExtendedConfig IO a
         run (Container containerName next) = do
-            updateDockers $ T.unpack containerName
-            updatePrep ["docker","pull", T.unpack containerName]
-            next containerName
+            pathExists <- lift $ doesPathExist $ T.unpack containerName
+            if pathExists
+                then do
+                    let fp = T.unpack containerName
+                        containerName' = takeBaseName fp
+                    addDockerFromPath containerName' $ Just fp
+                    next $ T.pack containerName'
+                else do
+                    addDocker $ T.unpack containerName
+                    next containerName
         run (Secret secretName next) = do
             -- pull secrets from aws vault
             secretRetrivalFailed secretName $ shells ("aws secretsmanager get-secret-value --secret-id " <> secretName <> " > /dev/null 2>&1") stdin
@@ -59,7 +69,7 @@ runTerraform config dep =
             let containerMapping = case M.lookup (T.unpack name) (_TerraformExtendedConfig_dockers conf) of
                     Just x -> x
                     Nothing -> error $ "container '" <> T.unpack name <> "' does not exist"
-                secretsForAttachment = fst containerMapping
+                secretsForAttachment = fst3 containerMapping
                 secrets = _TerraformExtendedConfig_secrets conf
                 secretName' = T.unpack secretName
             unless ( secretName' `elem` map secretifyName secrets) $ error $ "secret '" <> secretName' <> "' not found for attachment"
@@ -72,7 +82,7 @@ runTerraform config dep =
         run (Execute containerEngineArgs name containerArgs next) = do
             conf <- get
             let name' = T.unpack name
-                (secrets,dirs) = fromMaybe ([],[]) $ M.lookup name' $ _TerraformExtendedConfig_dockers conf
+                (secrets,dirs,_) = fromMaybe ([],[],Nothing) $ M.lookup name' $ _TerraformExtendedConfig_dockers conf
                 dirs' = map (\d -> ["-v",d <> ":" <> d]) dirs
                 secrets' = map (\s -> ["-e",s <> "=$" <> s]) secrets
                 cmd = ["docker","run"] ++ map T.unpack containerEngineArgs ++ concat dirs' ++ concat secrets' ++ [name'] ++ map T.unpack containerArgs
@@ -102,9 +112,9 @@ attachDockerFolder name folderDir = modify $ \s ->  case M.lookup name (_Terrafo
     Nothing -> error $ "attachDockerFolder: docker '" ++ show name ++ "' not found"
     Just _ -> s{ _TerraformExtendedConfig_dockers =
                     M.insertWith
-                        (\a b -> (fst a ++ fst b,snd a ++ snd b))
+                        updateDockerVal
                         name
-                        ([],[folderDir])
+                        ([],[folderDir],Nothing)
                         (_TerraformExtendedConfig_dockers s)
                }
 
@@ -116,21 +126,33 @@ attachDockerSecret name sec = modify $ \s ->  case M.lookup name (_TerraformExte
     Nothing -> error $ "attachDockerSecret: docker '" ++ show name ++ "' not found"
     Just _ -> s{ _TerraformExtendedConfig_dockers =
                     M.insertWith
-                        (\a b -> (fst a ++ fst b,snd a ++ snd b))
+                        updateDockerVal
                         name
-                        ([sec],[])
+                        ([sec],[],Nothing) --
                         (_TerraformExtendedConfig_dockers s)
                }
 
-updateDockers :: MonadState TerraformExtendedConfig m
+updateDockerVal :: ([a1], [a2], c1)
+                -> ([a1], [a2], c2)
+                -> ([a1], [a2], c2)
+updateDockerVal newv oldv = (fst3 newv ++ fst3 oldv,snd3 newv ++ snd3 oldv,thd3 oldv)
+
+addDocker :: MonadState TerraformExtendedConfig m
               => Name
               -> m ()
-updateDockers name = modify $ \s -> if M.member name (_TerraformExtendedConfig_dockers s)
+addDocker name = addDockerFromPath name Nothing
+
+addDockerFromPath :: MonadState TerraformExtendedConfig m
+                  => Name
+                  -> Maybe FilePath
+                  -> m ()
+addDockerFromPath name mFp = modify $ \s ->
+    if M.member name (_TerraformExtendedConfig_dockers s)
     then s
     else s{ _TerraformExtendedConfig_dockers =
                 M.insert
                     name
-                    ([],[])
+                    ([],[],mFp)
                     (_TerraformExtendedConfig_dockers s)
           }
 
