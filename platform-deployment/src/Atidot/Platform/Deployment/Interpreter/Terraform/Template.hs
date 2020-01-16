@@ -1,14 +1,17 @@
 {-# LANGUAGE QuasiQuotes #-}
 module Atidot.Platform.Deployment.Interpreter.Terraform.Template where
 
-import "text"           Data.Text (Text)
-import "base"           Data.Char
-import "ginger"         Text.Ginger
-import "raw-strings-qq" Text.RawString.QQ
-import "mtl"            Control.Monad.Writer (Writer)
-import "data-default" Data.Default
-import qualified "containers" Data.Map as M
-import qualified "text"       Data.Text as T
+import           "text"           Data.Text (Text)
+import           "base"           Data.Char
+import           "base"           Data.Maybe
+import           "ginger"         Text.Ginger
+import           "raw-strings-qq" Text.RawString.QQ
+import           "mtl"            Control.Monad.Writer (Writer)
+import           "data-default"   Data.Default
+import           "filepath"       System.FilePath
+import           "extra"          Data.Tuple.Extra
+import qualified "containers"     Data.Map as M
+import qualified "text"           Data.Text as T
 
 import Atidot.Platform.Deployment.Interpreter.AMI.Types hiding (DiskName,SecretName,VolumeName)
 import Atidot.Platform.Deployment.Interpreter.AMI.Template hiding (awsInstance,allTemplates, awsEbsVolume)
@@ -17,6 +20,7 @@ placeHolderAwsEbsVolumes :: [VolumeName]
 placeHolderAwsEbsVolumes = ["vol-01ac704e80ba48949"] -- These should be created in the AWS before running the code
 placeHoldersPhysicalDiskMappings :: [DeviceName]
 placeHoldersPhysicalDiskMappings = ["xvdh","sdf","sdg","sdh","sdj"]
+
 
 instance Default TerraformExtendedConfig where
     def = TerraformExtendedConfig
@@ -37,6 +41,7 @@ type VolumeName = String -- ebs volume name
 type Name = String
 type DeviceName = String
 type FolderDir = String
+type DockerInfo = M.Map Name ([SecretName],[FolderDir],Maybe FilePath)
 
 
 data TerraformExtendedConfig = TerraformExtendedConfig
@@ -44,14 +49,15 @@ data TerraformExtendedConfig = TerraformExtendedConfig
     , _TerraformExtendedConfig_instanceExec :: [Cmd]
     , _TerraformExtendedConfig_disks :: [(DeviceName,VolumeName)]
     , _TerraformExtendedConfig_secrets :: [SecretName]
-    , _TerraformExtendedConfig_dockers :: M.Map Name ([SecretName],[FolderDir])
+    , _TerraformExtendedConfig_dockers :: DockerInfo
     , _TerraformExtendedConfig_terraformConfig :: TerraformConfig
     , _TerraformExtendedConfig_availableDisks :: [(DeviceName,VolumeName)]
     }
 
 renderTerraform :: TerraformExtendedConfig -> Text
-renderTerraform (TerraformExtendedConfig prepCmds cmds disks secrets _ tconf _) =
-    let prepProvisioner = renderProvider tconf $ nullRemoteProvsioner prepCmds
+renderTerraform (TerraformExtendedConfig prepCmds cmds disks secrets dockers tconf _) =
+    let prepProvisioner = renderProvider tconf $ mountProvisioner prepCmds
+        dockerProvisioner' = renderProvider tconf $ dockerProvisioner dockers
         execProvisioner' = renderProvider tconf $ execProvisioner cmds
         otherTemplates = renderProvider tconf $ defTemplates
         (devNames, diskNames) = unzip disks
@@ -61,6 +67,7 @@ renderTerraform (TerraformExtendedConfig prepCmds cmds disks secrets _ tconf _) 
       [ otherTemplates
       , ebsVolumes
       , prepProvisioner
+      , dockerProvisioner'
       , secretsProvsioning
       , execProvisioner'
       ]
@@ -138,7 +145,8 @@ resource "null_resource" "secrets_provisioner" {
     public_ip = aws_eip.{{eipName}}.id
     volume_id = aws_volume_attachment.{{ebsVolumeName}}.id
     env_setter = null_resource.env_setter.id
-    mount_and_pull = null_resource.mount_and_pull.id
+    mount_provisioner = null_resource.mount_provisioner.id
+    docker_provisioner = null_resource.docker_provisioner.id
 
   }
 
@@ -166,9 +174,9 @@ resource "null_resource" "secrets_provisioner" {
 |]
 
 
-nullRemoteProvsioner :: [Cmd] -> String
-nullRemoteProvsioner cmds = [r|
-resource "null_resource" "mount_and_pull" {
+mountProvisioner :: [Cmd] -> String
+mountProvisioner cmds = [r|
+resource "null_resource" "mount_provisioner" {
 
   triggers = {
     public_ip = aws_eip.{{eipName}}.id
@@ -184,14 +192,63 @@ resource "null_resource" "mount_and_pull" {
     private_key = file("~/.ssh/{{keyName}}")
   }
     |] <>
-    genExec
+    genRemoteExec
   <> [r|
 }
     |]
     where
+        genRemoteExec :: String
+        genRemoteExec = [r|
+  provisioner "remote-exec" {
+    inline = [
+|] <> unlines ( map ((\l -> l <> ","). show) cmds) <>
+            [r|    ]
+  }
+            |]
 
-        genExec :: String
-        genExec = [r|
+dockerProvisioner :: DockerInfo -> String
+dockerProvisioner dockers =
+    let dockers' = M.toList dockers
+        locallyCreatedDockers = mapMaybe (thd3 . snd) dockers'
+        cmds = map setCmd dockers'
+    in [r|
+resource "null_resource" "docker_provisioner" {
+
+  triggers = {
+    public_ip = aws_eip.{{eipName}}.id
+    volume_id = aws_volume_attachment.{{ebsVolumeName}}.id
+    env_setter = null_resource.env_setter.id
+  }
+
+  connection {
+    user        = "ubuntu"
+    host        = aws_eip.{{eipName}}.public_ip
+    agent       = false
+    private_key = file("~/.ssh/{{keyName}}")
+  }
+    |] <>
+    (unlines $ map genFileProvisioner locallyCreatedDockers)
+   <> genRemoteExec cmds
+  <> [r|
+}
+    |]
+    where
+        getRemotePath remoteFp = "/home/ubuntu/" <> takeFileName remoteFp
+        setCmd (dockerName,(_,_,mfp)) = case mfp of
+            Just fp -> "docker load -i " <> getRemotePath fp
+            Nothing -> "docker pull " <> dockerName
+        genFileProvisioner :: String -> String
+        genFileProvisioner fileName =
+          let remoteFp = getRemotePath fileName
+          in [r|
+  provisioner "file" {
+    source      = |] <> show fileName <> [r|
+    destination = |] <> show remoteFp <> [r|
+  }
+            |]
+
+        genRemoteExec :: [String] -> String
+        genRemoteExec cmds = [r|
   provisioner "remote-exec" {
     inline = [
 |] <> unlines ( map ((\l -> l <> ","). show) cmds) <>

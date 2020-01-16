@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 61e356af67999cee1223314d87fdfdd592f960368b933db1b8f345df60667e82
+-- hash: 42d4529fb18f7b3659536c3b77397f4492971099bf297e4b4677e00d1729795c
 
 name:           platform-deployment
 version:        0.1.0.0
@@ -19,7 +19,6 @@ license-file:   LICENSE
 build-type:     Simple
 extra-source-files:
     README.md
-    ChangeLog.md
 
 source-repository head
   type: git
@@ -50,6 +49,8 @@ library
     , data-default
     , directory
     , exceptions
+    , extra
+    , filepath
     , free
     , ginger
     , mtl
@@ -60,9 +61,39 @@ library
     , uuid
   default-language: Haskell2010
 
-executable platform-deployment-exe
+executable packaging-deployment
+  main-is: PkgDep.hs
+  other-modules:
+      Main
+      Paths_platform_deployment
+  hs-source-dirs:
+      app
+  default-extensions: PackageImports OverloadedStrings ScopedTypeVariables
+  ghc-options: -threaded -rtsopts -with-rtsopts=-N -main-is PkgDep
+  build-depends:
+      aeson
+    , base >=4.7 && <5
+    , containers
+    , data-default
+    , directory
+    , exceptions
+    , extra
+    , filepath
+    , free
+    , ginger
+    , mtl
+    , optparse-generic
+    , platform-deployment
+    , raw-strings-qq
+    , text
+    , turtle
+    , uuid
+  default-language: Haskell2010
+
+executable platform-deployment
   main-is: Main.hs
   other-modules:
+      PkgDep
       Paths_platform_deployment
   hs-source-dirs:
       app
@@ -75,6 +106,8 @@ executable platform-deployment-exe
     , data-default
     , directory
     , exceptions
+    , extra
+    , filepath
     , free
     , ginger
     , mtl
@@ -102,9 +135,10 @@ test-suite platform-deployment-test
     , data-default
     , directory
     , exceptions
+    , extra
+    , filepath
     , free
     , ginger
-    , hspec
     , mtl
     , optparse-generic
     , platform-deployment

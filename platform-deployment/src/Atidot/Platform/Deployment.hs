@@ -39,7 +39,7 @@ type DeploymentM = Free Deployment
 makeFree ''Deployment
 
 placeHolderContainer :: Name
-placeHolderContainer = "helloWorld"
+placeHolderContainer = "hello-world"
 
 placeHolderSecret :: SecretName
 placeHolderSecret = "tutorials/MyFirstTutorialSecret" -- this must exist in aws secrets manager in the user's account
@@ -60,6 +60,17 @@ nsss = do
     attachSecret s c                      -- attaches secret to the container
     attachVolume dir c                    -- attaches the volume to the container also
     execute [] c []                       -- executes the program inside the container
+
+
+
+nsss2 :: DeploymentM ()
+nsss2 = do
+    s <- secret placeHolderSecret             -- declares secret that already exists in aws secrets manager
+    dir <- mount placeHolderData              -- declares the mounting of volume data into the machine
+    c <- container "/home/user/docker.tar.gz" -- declares the container running hello world
+    attachSecret s c                          -- attaches secret to the container
+    attachVolume dir c                        -- attaches the volume to the container also
+
 
 
 kiss :: DeploymentM ()

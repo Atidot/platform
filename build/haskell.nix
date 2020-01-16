@@ -29,7 +29,6 @@ rec {
   platformPackagingSrc      = ../platform-packaging;
   platformPackagingTypesSrc = ../platform-packaging-types;
   platformVisualSrc         = ../platform-visual;
-  platformTerraformSrc      = ../platform-terraform;
   platformDeploymentSrc     = ../platform-deployment;
 
   projectPackages = hspkgs: {
@@ -44,7 +43,6 @@ rec {
     platform-packaging-types = hspkgs.callCabal2nix "platform-packaging-types" "${platformPackagingTypesSrc}" {};
     platform-process         = hspkgs.callCabal2nix "platform-process"         "${platformProcessSrc}" {};
     platform-visual          = hspkgs.callCabal2nix "platform-visual"          "${platformVisualSrc}" {};
-    platform-terraform       = hspkgs.callCabal2nix "platform-terraform"       "${platformTerraformSrc}" {};
     platform-deployment      = hspkgs.callCabal2nix "platform-deployment"      "${platformDeploymentSrc}" {};
   };
 

@@ -26,6 +26,7 @@ main = do
 
 scripts =
     [ ("nsss",nsss)
+    , ("nsss2",nsss2)
     , ("kiss",kiss)
     , ("nes",noneExistentSecret)
     , ("nesa",noneExistentSecretAttached)

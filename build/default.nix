@@ -15,7 +15,6 @@ let
     platform-packaging
     platform-packaging-types
     platform-visual
-    platform-terraform
     platform-deployment
   ]);
 
