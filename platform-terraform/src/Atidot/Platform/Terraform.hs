@@ -15,7 +15,7 @@ simpleConfig :: T.Text -> TF ()
 simpleConfig zone = do
   awsVpc <- awsVpc "atidot-vpc" "10.0.0.0/16" $ \vpcParams -> vpcParams{_vpc_enable_dns_support = True, _vpc_enable_dns_hostnames = True}
   awsInternetGateway' "atidot-env-gw" (vpc_id awsVpc)
-  awsSn <- awsSubnet "atidot-subnet" (vpc_id awsVpc) "${cidrsubnet(aws_vpc.example_atidot-vpc.cidr_block, 3, 1)}" $ set sn_availability_zone (zone <> "a") -- <-- replace here after implementation
+  awsSn <- awsSubnet "atidot-subnet" (vpc_id awsVpc) "${cidrsubnet(aws_vpc.example_atidot-vpc.cidr_block, 3, 1)}" $ set sn_availability_zone (zone <> "a")
   awsRt <- awsRouteTable "atidot-rt" (vpc_id awsVpc) $ \rtParams -> rtParams{_rt_tags = ("cidr_block" =: "0.0.0.0/0") <> ("gateway_id" =: "${aws_internet_gateway.example_atidot-env-gw.id}")}  -- add route entry
   awsRouteTableAssociation' "atidot-env-assoc" (sn_id awsSn) (rt_id awsRt)
   awsSg <- awsSecurityGroup "atidot-sg" $ set sg_vpc_id (Just $ vpc_id awsVpc)
@@ -49,13 +49,6 @@ egressAll = EgressRuleParams
   }
 
 (=:) = M.singleton
-
--- to be added declaratively and replace the comment in line 20
-cidrSubnet :: AwsId AwsSubnet
-           -> Int
-           -> Int
-           -> String
-cidrSubnet = undefined
 
 mkDep :: IO ()
 mkDep = generateFiles "" $ do
