@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 27285e17421f43b3be079b7f0a54ce649d944d1f3ea3cbca6e2c44336314329c
+-- hash: 42d4529fb18f7b3659536c3b77397f4492971099bf297e4b4677e00d1729795c
 
 name:           platform-deployment
 version:        0.1.0.0
@@ -55,6 +55,35 @@ library
     , ginger
     , mtl
     , optparse-generic
+    , raw-strings-qq
+    , text
+    , turtle
+    , uuid
+  default-language: Haskell2010
+
+executable packaging-deployment
+  main-is: PkgDep.hs
+  other-modules:
+      Main
+      Paths_platform_deployment
+  hs-source-dirs:
+      app
+  default-extensions: PackageImports OverloadedStrings ScopedTypeVariables
+  ghc-options: -threaded -rtsopts -with-rtsopts=-N -main-is PkgDep
+  build-depends:
+      aeson
+    , base >=4.7 && <5
+    , containers
+    , data-default
+    , directory
+    , exceptions
+    , extra
+    , filepath
+    , free
+    , ginger
+    , mtl
+    , optparse-generic
+    , platform-deployment
     , raw-strings-qq
     , text
     , turtle
