@@ -15,7 +15,6 @@ extra-source-files:  CHANGELOG.md
 
 library
   exposed-modules: Platform.Packaging.Pip.Types
-                 , Platform.Packaging.Types
   other-modules:   Platform.Packaging.Pip.Types.Utils
                  , Platform.Packaging.Pip.Types.Check
                  , Platform.Packaging.Pip.Types.Debug
