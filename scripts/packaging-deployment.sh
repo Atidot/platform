@@ -5,8 +5,7 @@ DEPLOYMENT="$(mktemp -d -t deployment)"
 declare -i index=1
 for var in "$@"
 do
-    platform-packaging pytodocker --input $var --outfile $DEPLOYMENT/$var
-    platform-deployment _ --pythondir $var --dockerifle $DEPLOYMENT/$var # change this to work with platform-deployment
+    platform-packaging pytodocker --input $var --outfile $DEPLOYMENT/docker$index
+    platform-deployment _ --pythondir $var --dockerfile $DEPLOYMENT/docker$index # change this to work with platform-deployment
+    index=$(( index + 1 ))
 done
-
-rm -rf "$DEPLOYMENT"
