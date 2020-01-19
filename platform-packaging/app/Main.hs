@@ -11,9 +11,9 @@ import           "base"                     GHC.Generics (Generic)
 import           "base"                     System.IO
 import           "base"                     Control.Monad (filterM)
 import           "aeson"                    Data.Aeson (Value, decode)
-import qualified "bytestring"               Data.ByteString.Lazy.Char8 as B8 (putStrLn, pack)
+import qualified "bytestring"               Data.ByteString.Lazy.Char8 as B8 (pack)
 import           "data-default"             Data.Default (Default, def)
-import           "dockerfile"               Data.Docker (dockerfile)
+import           "dockerfile"               Data.Docker (Docker, dockerfile)
 import           "containers"               Data.Map.Strict (empty)
 import qualified "text"                     Data.Text.IO as TIO
 import qualified "text"                     Data.Text as T
@@ -60,31 +60,12 @@ runScript p@PyToDocker{} = do
     if isDir
        then do
             modules <- fmap unpack . recursivelyConcatenate $ fp
-            pyToDocker modules (env') (outfile p)
-       else ioWrapper (\instring -> pyToDocker instring (env') (outfile p)) fp
+            pipeTo (outfile p) . dockerfile =<< pyToDocker modules env'
+       else ioWrapper (\instring -> pipeTo (outfile p) . dockerfile =<< pyToDocker instring env') fp
+    where
+        pipeTo Nothing     = putStrLn
+        pipeTo (Just file) = writeFile file
 runScript a@PrintAST{} = ioWrapper printAST $ infile a
-
--- This function concatenates all python files in a directory into one long string.
--- It works with Text because concatenating singly-linked lists takes a lot
--- of time.
-recursivelyConcatenate :: FilePath -> IO Text
-recursivelyConcatenate fp = do
-    isModule <- containsInit fp
-    if not isModule
-       then return ""
-       else do
-           pyFiles <- fmap (filter (isSuffixOf ".py"))
-                    . filterM doesFileExist
-                  =<< listDirectory fp
-           localModules <- fmap T.concat
-                         . sequence
-                         $ map TIO.readFile pyFiles
-           deeperModules <- fmap T.concat
-                          . sequence
-                          . map recursivelyConcatenate
-                       =<< filterM doesDirectoryExist
-                       =<< listDirectory fp
-           return $ localModules <> deeperModules
 
 ioWrapper :: (String -> IO ()) -> FilePath -> IO ()
 ioWrapper f inFile = do
@@ -94,12 +75,10 @@ ioWrapper f inFile = do
 
 pyToDocker :: String
            -> Maybe ContainerEnv
-           -> Maybe String
-           -> IO ()
-pyToDocker module' env outfile = do
+           -> IO (Docker ())
+pyToDocker module' env = do
     pipModulesForInstall <- fmap (map (unpack . _pyPkg_name . snd) . fst)
-                          . runPythonImports
-                          $ module'
+                          $ runPythonImports module'
     let defEnv = ContainerEnv
                  Ubuntu
                  [User "atidot"]
@@ -109,13 +88,8 @@ pyToDocker module' env outfile = do
                  []
                  Nothing
                  Nothing
-    let env' = maybe defEnv id env
-    pipeTo outfile . dockerfile
-                   . toDocker
-                   $ env'
-    where
-        pipeTo Nothing     = putStrLn
-        pipeTo (Just file) = writeFile file
+    let env' = maybe defEnv id env -- TODO: instead of id, we need to overwrite the installations entry of the record.
+    return $ toDocker env'
 
 printAST :: String -> IO ()
 printAST module' = do

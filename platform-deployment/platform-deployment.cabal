@@ -73,9 +73,11 @@ executable packaging-deployment
   build-depends:
       aeson
     , base >=4.7 && <5
+    , bytestring
     , containers
     , data-default
     , directory
+    , dockerfile
     , exceptions
     , extra
     , filepath
@@ -84,6 +86,8 @@ executable packaging-deployment
     , mtl
     , optparse-generic
     , platform-deployment
+    , platform-packaging
+    , platform-packaging-types
     , raw-strings-qq
     , text
     , turtle

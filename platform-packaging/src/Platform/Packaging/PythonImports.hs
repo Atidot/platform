@@ -9,12 +9,13 @@ module Platform.Packaging.PythonImports
     , PyPkg(..)
     , PythonImportException
     , runPythonImports
+    , recursivelyConcatenate
     , getAST
     , containsInit
     ) where
 
 import           "base"                     Control.Monad.IO.Class (MonadIO, liftIO)
-import           "base"                     Control.Monad (when, unless, filterM, zipWithM, sequence_)
+import           "base"                     Control.Monad (join, when, unless, filterM, zipWithM, sequence_)
 import           "base"                     Data.Typeable (Typeable)
 import           "base"                     Data.Data (Data)
 import           "base"                     Data.List (foldl', intercalate, isSuffixOf, partition, sortBy, (\\))
@@ -488,6 +489,31 @@ containsInit :: (MonadThrow m, MonadIO m)
             => FilePath
             -> m Bool
 containsInit fp = liftIO . doesFileExist $ fp <> "/__init__.py"
+
+recursivelyConcatenate :: (MonadThrow m, MonadIO m)
+                       => FilePath
+                       -> m Text
+recursivelyConcatenate fp = do
+    isModule <- containsInit fp
+    dirContents <- liftIO $ listDirectory fp
+    if not isModule
+       then return ""
+       else do
+           pyFiles <- fmap (filter (isSuffixOf ".py"))
+                    . filterM (\location -> liftIO $ doesFileExist location)
+                    $ dirContents
+           localModules <- liftIO
+                         . fmap T.concat
+                         . sequence
+                         $ map TIO.readFile pyFiles
+           deeperModules <- fmap T.concat
+                          . join
+                          . fmap sequence
+                          . fmap (map recursivelyConcatenate)
+                          . liftIO
+                          . filterM doesDirectoryExist
+                          $ dirContents
+           return $ localModules <> deeperModules
 
 enumerateSubmodules :: (MonadCatch m, MonadIO m)
                     => FilePath -- The common prefix to be deleted

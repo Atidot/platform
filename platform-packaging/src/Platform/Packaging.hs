@@ -12,8 +12,10 @@ import "base"                     Data.Data (Data)
 import "lens"                     Control.Lens hiding (from)
 import "containers"               Data.Map.Strict (assocs)
 import "dockerfile"               Data.Docker
+import "text"                     Data.Text (unpack)
 import "platform-types"           Platform.Types
 import "platform-packaging-types" Platform.Packaging.Types
+import                            Platform.Packaging.PythonImports
 
 makeLenses ''ContainerEnv
 
@@ -26,6 +28,22 @@ toDocker (ContainerEnv os users img pkgs environment runCmds entrypoint' command
     mapM_ run                   runCmds
     maybe (return ()) (flip entrypoint []) entrypoint'
     maybe (return ()) cmd                  command
+
+pythonToDocker :: String
+               -> ContainerEnv
+               -> IO (Docker ())
+pythonToDocker module' env = do
+    pipModulesForInstall <- fmap (map (unpack . _pyPkg_name . snd) . fst)
+                          $ runPythonImports module'
+    return $ toDocker env -- TODO modify env according to the information in pipModulesForInstall
+
+pythonToDockerDefault :: String
+                      -> Maybe ContainerEnv
+                      -> IO (Docker ())
+pythonToDockerDefault module' env = maybe def' applyToDocker env
+  where
+      def' = undefined
+      applyToDocker = undefined
 
 installPkgs :: String
             -> [String]
