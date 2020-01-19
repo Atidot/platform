@@ -12,7 +12,7 @@ import "dockerfile"               Data.Docker (Docker, dockerfile)
 import "text"                     Data.Text as T (pack, unpack)
 import "directory"                System.Directory (doesDirectoryExist, doesFileExist)
 import "turtle"                   Turtle (Shell, inproc, sh)
-import "optparse-generic"         Options.Generic (getRecord)
+import "optparse-generic"         Options.Generic (getRecord, ParseRecord)
 import "platform-packaging"       Platform.Packaging.PythonImports
 import "platform-packaging-types" Platform.Packaging.Types (ContainerEnv)
 import                            Atidot.Platform.Deployment
