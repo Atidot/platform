@@ -10,7 +10,7 @@ import "base"                     GHC.Generics (Generic)
 import "base"                     Data.Typeable (Typeable)
 import "base"                     Data.Data (Data)
 import "lens"                     Control.Lens hiding (from)
-import "containers"               Data.Map.Strict (assocs)
+import "containers"               Data.Map.Strict (assocs, empty)
 import "dockerfile"               Data.Docker
 import "text"                     Data.Text (unpack)
 import "platform-types"           Platform.Types
@@ -35,15 +35,24 @@ pythonToDocker :: String
 pythonToDocker module' env = do
     pipModulesForInstall <- fmap (map (unpack . _pyPkg_name . snd) . fst)
                           $ runPythonImports module'
-    return $ toDocker env -- TODO modify env according to the information in pipModulesForInstall
+    let installPythonEnv = env & containerEnv_installations <>~ [("pip install -q", pipModulesForInstall)]
+    return $ toDocker installPythonEnv
+
+testingEnv :: ContainerEnv
+testingEnv = ContainerEnv Ubuntu
+                          [User "atidot"]
+                          "ubuntu:latest"
+                          []
+                          empty
+                          []
+                          Nothing
+                          Nothing
 
 pythonToDockerDefault :: String
                       -> Maybe ContainerEnv
                       -> IO (Docker ())
-pythonToDockerDefault module' env = maybe def' applyToDocker env
-  where
-      def' = undefined
-      applyToDocker = undefined
+pythonToDockerDefault module' env = pythonToDocker module' env'
+    where env' = maybe testingEnv (testingEnv <>) env
 
 installPkgs :: String
             -> [String]

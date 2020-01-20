@@ -3,6 +3,7 @@
 {-# LANGUAGE OverloadedStrings  #-}
 module PkgDep where
 
+import "base"                     Debug.Trace (trace)
 import "base"                     Data.Maybe (maybe)
 import "base"                     Data.Typeable (Typeable)
 import "base"                     GHC.Generics (Generic)
@@ -14,8 +15,9 @@ import "data-default"             Data.Default
 import "dockerfile"               Data.Docker (Docker, dockerfile)
 import "text"                     Data.Text as T (Text, pack, unpack)
 import "directory"                System.Directory (doesDirectoryExist, doesFileExist)
-import "turtle"                   Turtle (Shell, Line, inproc, textToLine, sh)
+import "turtle"                   Turtle (Shell, Line, inproc, textToLines, sh, view, select)
 import "optparse-generic"         Options.Generic (getRecord, ParseRecord)
+import "platform-packaging"       Platform.Packaging (pythonToDockerDefault)
 import "platform-packaging"       Platform.Packaging.PythonImports
 import "platform-packaging-types" Platform.Packaging.Types (ContainerEnv)
 import                            Atidot.Platform.Deployment
@@ -47,30 +49,27 @@ main = getRecord "Packaging Deployment" >>= \record -> do
     if (isDir && isFile) || (not isDir && not isFile)
        then error "Impossible file state"
        else return ()
-    docker <- if isDir
-                 then do
-                     modules <- fmap T.unpack $ recursivelyConcatenate fp
-                     pyToDocker modules env' Nothing
-                 else do
-                     handle <- openFile fp ReadMode
-                     contents <- hGetContents handle
-                     pyToDocker contents
-    sh $ buildDocker docker loc
+    modules <- if isDir
+                  then do
+                      fmap T.unpack $ recursivelyConcatenate fp
+                  else do
+                      handle <- openFile fp ReadMode
+                      hGetContents handle
+    docker <- pythonToDockerDefault modules Nothing
+    sh $ buildDocker docker
+    dockerLocation <- undefined
     runTerraform def $ do
         s <- secret placeHolderSecret
         dir <- mount placeHolderData
-        c <- container . T.pack $ loc
+        c <- container . T.pack $ dockerLocation
         attachSecret s c
         attachVolume dir c
-    where pyToDocker = undefined
 
 buildDocker :: Docker ()
-            -> FilePath
             -> Shell Line
-buildDocker d output = do
-    let dockerfileAsText = T.pack . dockerfile $ d
+buildDocker d = do
+    let dockerfileStream = select . textToLines . T.pack . dockerfile $ d
     -- The following args let us build a dockerfile from stdin
-    let maybeLine = fmap return $ textToLine dockerfileAsText
-    maybe (throwM $ DockerfileEmpty dockerfileAsText)
-          (inproc "docker" ["build", "-q", "-o", T.pack output, "-", "<"])
-          maybeLine
+    inproc "docker"
+           ["build", "--quiet", "-", "<"]
+           dockerfileStream
