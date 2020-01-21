@@ -60,8 +60,8 @@ runScript p@PyToDocker{} = do
     if isDir
        then do
             modules <- fmap unpack . recursivelyConcatenate $ fp
-            pipeTo (outfile p) . dockerfile =<< pyToDocker modules env'
-       else ioWrapper (\instring -> pipeTo (outfile p) . dockerfile =<< pyToDocker instring env') fp
+            pipeTo (outfile p) . dockerfile =<< pythonToDockerDefault modules env'
+       else ioWrapper (\instring -> pipeTo (outfile p) . dockerfile =<< pythonToDockerDefault instring env') fp
     where
         pipeTo Nothing     = putStrLn
         pipeTo (Just file) = writeFile file
@@ -73,28 +73,8 @@ ioWrapper f inFile = do
     contents <- hGetContents handle
     f contents
 
-pyToDocker :: String
-           -> Maybe ContainerEnv
-           -> IO (Docker ())
-pyToDocker module' env = do
-    pipModulesForInstall <- fmap (map (unpack . _pyPkg_name . snd) . fst)
-                          $ runPythonImports module'
-    let defEnv = ContainerEnv
-                 Ubuntu
-                 [User "atidot"]
-                 "ubuntu:latest"
-                 [("pip install -q", pipModulesForInstall)]
-                 empty
-                 []
-                 Nothing
-                 Nothing
-    let env' = maybe defEnv id env -- TODO: instead of id, we need to overwrite the installations entry of the record.
-    return $ toDocker env'
-
 printAST :: String -> IO ()
-printAST module' = do
-    ast <- getAST module'
-    putStrLn . show $ ast
+printAST module' = maybe (putStrLn "getAST failed") (putStrLn . show) (getAST module')
 
 printImports :: String -> IO ()
 printImports s = do

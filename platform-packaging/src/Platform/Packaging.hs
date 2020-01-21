@@ -6,13 +6,15 @@
 module Platform.Packaging where
 
 import "base"                     Data.Foldable (foldl')
-import "base"                     GHC.Generics (Generic)
+import "base"                     Data.List (intercalate)
 import "base"                     Data.Typeable (Typeable)
 import "base"                     Data.Data (Data)
+import "base"                     GHC.Generics (Generic)
 import "lens"                     Control.Lens hiding (from)
 import "containers"               Data.Map.Strict (assocs, empty)
 import "dockerfile"               Data.Docker
 import "text"                     Data.Text (unpack)
+import "regex-pcre"               Text.Regex.PCRE hiding (empty)
 import "platform-types"           Platform.Types
 import "platform-packaging-types" Platform.Packaging.Types
 import                            Platform.Packaging.PythonImports
@@ -20,10 +22,11 @@ import                            Platform.Packaging.PythonImports
 makeLenses ''ContainerEnv
 
 toDocker :: ContainerEnv -> Docker ()
-toDocker (ContainerEnv os users img pkgs environment runCmds entrypoint' command) = do
+toDocker (ContainerEnv os users img preInstallationCmds pkgs environment runCmds entrypoint' command) = do
     from img
-    mapM_ (makeUser os)         users
+    mapM_ run                   preInstallationCmds
     mapM_ (uncurry installPkgs) pkgs
+    mapM_ (makeUser os)         users
     mapM_ (uncurry env)         (assocs environment)
     mapM_ run                   runCmds
     maybe (return ()) (flip entrypoint []) entrypoint'
@@ -35,14 +38,17 @@ pythonToDocker :: String
 pythonToDocker module' env = do
     pipModulesForInstall <- fmap (map (unpack . _pyPkg_name . snd) . fst)
                           $ runPythonImports module'
-    let installPythonEnv = env & containerEnv_installations <>~ [("pip install -q", pipModulesForInstall)]
+    let installPythonEnv = env & containerEnv_installations <>~ [("pip3 install -q", pipModulesForInstall)]
     return $ toDocker installPythonEnv
 
 testingEnv :: ContainerEnv
 testingEnv = ContainerEnv Ubuntu
                           [User "atidot"]
                           "ubuntu:latest"
-                          []
+                          [ "apt-get update"
+                          , "apt-get -y install sudo"]
+                          --, "echo \"atidot:atidot\" | chpasswd && adduser atidot sudo"]
+                          [("sudo apt-get -y install", ["python3", "python3-pip"])]
                           empty
                           []
                           Nothing
@@ -58,7 +64,7 @@ installPkgs :: String
             -> [String]
             -> Docker ()
 installPkgs installer []   = return ()
-installPkgs installer pkgs = run installation
+installPkgs installer pkgs = run $ installation =~ ("\\A(.|\\n|\\r|\\f)*(?=\\s*\\\\\\Z)" :: String)
     where installation = foldl' (++) (installer ++ endl1) (map instLine pkgs)
           instLine pkg = "    " ++ pkg ++ endl pkg
           endl pkg     = replicate (maxLength - paddedLength pkg) ' ' ++ " \\\n"

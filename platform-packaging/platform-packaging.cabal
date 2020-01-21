@@ -21,6 +21,7 @@ library
   exposed-modules:    Platform.Packaging
                     , Platform.Packaging.Pip
                     , Platform.Packaging.PythonImports
+                    , Platform.Packaging.PythonImports.Internal
   -- other-extensions:
   build-depends:       base
                      , lens
@@ -52,6 +53,7 @@ test-suite platform-packaging-test
   main-is:          Spec.hs
   build-depends:    base
                   , hspec
+                  , QuickCheck
                   , platform-types
                   , platform-dsl
                   , platform-packaging

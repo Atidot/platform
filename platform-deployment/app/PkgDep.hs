@@ -3,9 +3,9 @@
 {-# LANGUAGE OverloadedStrings  #-}
 module PkgDep where
 
-import "base"                     Debug.Trace (trace)
 import "base"                     Data.Maybe (maybe)
 import "base"                     Data.Typeable (Typeable)
+import "base"                     Data.Monoid (mempty)
 import "base"                     GHC.Generics (Generic)
 import "base"                     System.IO
 import "exceptions"               Control.Monad.Catch (Exception, throwM)
@@ -15,7 +15,7 @@ import "data-default"             Data.Default
 import "dockerfile"               Data.Docker (Docker, dockerfile)
 import "text"                     Data.Text as T (Text, pack, unpack)
 import "directory"                System.Directory (doesDirectoryExist, doesFileExist)
-import "turtle"                   Turtle (Shell, Line, inproc, textToLines, sh, view, select)
+import "turtle"                   Turtle (Shell, Line, inproc, inshell, textToLines, sh, view, select)
 import "optparse-generic"         Options.Generic (getRecord, ParseRecord)
 import "platform-packaging"       Platform.Packaging (pythonToDockerDefault)
 import "platform-packaging"       Platform.Packaging.PythonImports
@@ -71,5 +71,5 @@ buildDocker d = do
     let dockerfileStream = select . textToLines . T.pack . dockerfile $ d
     -- The following args let us build a dockerfile from stdin
     inproc "docker"
-           ["build", "--quiet", "-", "<"]
+           ["build", "--quiet", "-"]
            dockerfileStream

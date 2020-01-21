@@ -48,6 +48,7 @@ data ContainerEnv
         { _containerEnv_OS :: !OS
         , _containerEnv_users :: ![User]
         , _containerEnv_image :: !String
+        , _containerEnv_preInstallationCmds :: ![String]
         , _containerEnv_installations :: ![(String, [String])]
         , _containerEnv_env :: !(Map String String)
         , _containerEnv_runCmds :: ![String]
@@ -60,6 +61,7 @@ instance Default ContainerEnv where
                        [Root]
                        "ubuntu:latest"
                        []
+                       []
                        empty
                        []
                        Nothing
@@ -71,11 +73,12 @@ instance ToJSON ContainerEnv where
 instance FromJSON ContainerEnv where
 
 instance Semigroup ContainerEnv where
-    (<>) (ContainerEnv os1 users1 image1 insts1 env1 runs1 entry1 command1)
-         (ContainerEnv os2 users2 image2 insts2 env2 runs2 entry2 command2)
+    (<>) (ContainerEnv os1 users1 image1 preinsts1 insts1 env1 runs1 entry1 command1)
+         (ContainerEnv os2 users2 image2 preinsts2 insts2 env2 runs2 entry2 command2)
            = ContainerEnv os2
                           (users1 <> users2)
                           image2
+                          (preinsts1 <> preinsts2)
                           (insts1 <> insts2)
                           (env2 <> env1) -- Map prefers the left value
                           (runs1 <> runs2)
