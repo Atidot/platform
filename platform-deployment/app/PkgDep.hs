@@ -56,7 +56,7 @@ main = getRecord "Packaging Deployment" >>= \record -> do
         imageName <- makeContainer docker
         s <- secret placeHolderSecret
         dir <- mount placeHolderData
-        c <- container $ rootDir <> "/" <> imageName
+        c <- container $ rootDir <> "/containers/" <> imageName
         attachSecret s c
         attachVolume dir c
 
