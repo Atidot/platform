@@ -32,3 +32,6 @@ runTest config dep = do
         run (AttachSecret _ _ next) = next
         run (AttachVolume _ _ next) = next
         run (Execute _ _ _ next) = next
+        run (MakeContainer _ next) = do
+            liftIO $ putStrLn "some container creation"
+            next ""

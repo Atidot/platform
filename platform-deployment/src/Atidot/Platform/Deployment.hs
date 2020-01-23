@@ -4,10 +4,11 @@
 
 module Atidot.Platform.Deployment where
 
-import "base"                   Data.Typeable
-import "free"                   Control.Monad.Free
-import "free"                   Control.Monad.Free.TH
-import "text"                   Data.Text(Text)
+import "base"                     Data.Typeable
+import "free"                     Control.Monad.Free
+import "free"                     Control.Monad.Free.TH
+import "text"                     Data.Text(Text)
+import "platform-packaging-types" Platform.Packaging.Types (ContainerEnv)
 
 data Volume = Volume FilePath
 data Disk = Disk FilePath
@@ -30,6 +31,7 @@ data Deployment a
     | AttachVolume FolderDir Name a
     -- execution
     | Execute [Arg] Name [Arg] a
+    | MakeContainer ContainerEnv (Name -> a)
 
 
     deriving (Typeable, Functor)

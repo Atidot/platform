@@ -51,7 +51,7 @@ main = getRecord "Platform Packaging" >>= runScript
 runScript :: CLI -> IO ()
 runScript p@PyToDocker{} = do
     let fp = input p
-    let env' = fmap B8.pack (env p) >>= decode
+    --let env' = maybe def id (fmap B8.pack (env p) >>= decode)
     isDir <- doesDirectoryExist fp
     isFile <- doesFileExist fp
     if (isDir && isFile) || (not isDir && not isFile) -- TODO: abstract this pattern
@@ -60,8 +60,9 @@ runScript p@PyToDocker{} = do
     if isDir
        then do
             modules <- fmap unpack . recursivelyConcatenate $ fp
-            pipeTo (outfile p) . dockerfile =<< pythonToDockerDefault modules env'
-       else ioWrapper (\instring -> pipeTo (outfile p) . dockerfile =<< pythonToDockerDefault instring env') fp
+            pipeTo (outfile p) =<< pythonToDockerStringDefault modules
+       else ioWrapper (\instring -> pipeTo (outfile p) =<< pythonToDockerStringDefault instring) fp
+    -- Those previous pythonToDockerStringDefault functions don't give full CLI functionality.
     where
         pipeTo Nothing     = putStrLn
         pipeTo (Just file) = writeFile file

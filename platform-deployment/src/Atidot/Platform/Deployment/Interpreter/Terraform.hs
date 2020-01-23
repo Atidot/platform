@@ -1,16 +1,19 @@
 {-# LANGUAGE FlexibleContexts #-}
 module Atidot.Platform.Deployment.Interpreter.Terraform where
 
-import qualified "text"       Data.Text as T
 import           "base"       Data.Maybe
 import           "extra"      Data.Tuple.Extra
-import           "directory"  System.Directory
+import qualified "containers" Data.Map as M
+import           "dockerfile" Data.Docker (dockerfile)
+import qualified "text"       Data.Text as T
 import           "exceptions" Control.Monad.Catch
 import           "free"       Control.Monad.Free
 import           "mtl"        Control.Monad.State
+import           "directory"  System.Directory
 import           "turtle"     Turtle hiding (x, s, d,FilePath, fp)
 import           "filepath"   System.FilePath
-import qualified "containers" Data.Map as M
+import           "platform-packaging" Platform.Packaging (toDocker)
+import           "platform-packaging-types" Platform.Packaging.Types (ContainerEnv)
 
 import       Atidot.Platform.Deployment.Interpreter.Utils
 import       Atidot.Platform.Deployment.Interpreter.Terraform.Template
@@ -88,6 +91,16 @@ runTerraform config dep =
                 cmd = ["docker","run"] ++ map T.unpack containerEngineArgs ++ concat dirs' ++ concat secrets' ++ [name'] ++ map T.unpack containerArgs
             updateExec cmd
             next
+        run (MakeContainer containerEnv next) = do
+            dockerId <- buildDocker containerEnv
+            next dockerId
+
+buildDocker :: MonadIO m
+            => ContainerEnv
+            -> m Text
+buildDocker env' = do
+    let dockerfileStream = select . textToLines . T.pack . dockerfile . toDocker $ env'
+    strict $ inproc "docker" ["build", "--quiet", "-"] dockerfileStream
 
 updatePrep :: (MonadState TerraformExtendedConfig m, Foldable t)
            => t [Char]

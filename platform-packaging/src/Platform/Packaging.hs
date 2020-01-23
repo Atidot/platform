@@ -32,14 +32,30 @@ toDocker (ContainerEnv os users img preInstallationCmds pkgs environment runCmds
     maybe (return ()) (flip entrypoint []) entrypoint'
     maybe (return ()) cmd                  command
 
-pythonToDocker :: String
-               -> ContainerEnv
-               -> IO (Docker ())
-pythonToDocker module' env = do
+toDockerString :: ContainerEnv -> String
+toDockerString = dockerfile . toDocker
+
+pythonToContainerEnv :: String
+                     -> ContainerEnv
+                     -> IO ContainerEnv
+pythonToContainerEnv module' env = do
     pipModulesForInstall <- fmap (map (unpack . _pyPkg_name . snd) . fst)
                           $ runPythonImports module'
     let installPythonEnv = env & containerEnv_installations <>~ [("pip3 install -q", pipModulesForInstall)]
-    return $ toDocker installPythonEnv
+    return installPythonEnv
+
+pythonToContainerEnvDefault :: String
+                            -> IO ContainerEnv
+pythonToContainerEnvDefault module' = pythonToContainerEnv module' testingEnv
+
+pythonToDockerString :: String
+                     -> ContainerEnv
+                     -> IO String
+pythonToDockerString module' env = fmap (dockerfile . toDocker) $ pythonToContainerEnv module' env
+
+pythonToDockerStringDefault :: String
+                            -> IO String
+pythonToDockerStringDefault module' = fmap (dockerfile . toDocker) $ pythonToContainerEnvDefault module'
 
 testingEnv :: ContainerEnv
 testingEnv = ContainerEnv Ubuntu
@@ -53,12 +69,6 @@ testingEnv = ContainerEnv Ubuntu
                           []
                           Nothing
                           Nothing
-
-pythonToDockerDefault :: String
-                      -> Maybe ContainerEnv
-                      -> IO (Docker ())
-pythonToDockerDefault module' env = pythonToDocker module' env'
-    where env' = maybe testingEnv (testingEnv <>) env
 
 installPkgs :: String
             -> [String]

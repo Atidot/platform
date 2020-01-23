@@ -102,6 +102,7 @@ runAMI config dep =
         run _ (AttachSecret _ _ next) = next
         run _ (AttachVolume _ _ next) = next
         run _ (Execute _ _ _ next) = next
+        run _ (MakeContainer _ _) = undefined
 
 sshW :: Text
      -> [Text]

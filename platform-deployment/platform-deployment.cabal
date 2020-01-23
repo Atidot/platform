@@ -56,6 +56,7 @@ library
     , mtl
     , optparse-generic
     , raw-strings-qq
+    , regex-pcre
     , text
     , turtle
     , uuid
@@ -93,6 +94,7 @@ executable packaging-deployment
     , platform-packaging
     , platform-packaging-types
     , raw-strings-qq
+    , regex-pcre
     , text
     , turtle
     , uuid
@@ -122,6 +124,7 @@ executable platform-deployment
     , optparse-generic
     , platform-deployment
     , raw-strings-qq
+    , regex-pcre
     , text
     , turtle
     , uuid
@@ -156,6 +159,7 @@ test-suite platform-deployment-test
     , optparse-generic
     , platform-deployment
     , raw-strings-qq
+    , regex-pcre
     , text
     , turtle
     , uuid
