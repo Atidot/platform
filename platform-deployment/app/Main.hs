@@ -13,7 +13,6 @@ data CLI = CLI
 
 instance ParseRecord CLI
 
-
 main :: IO ()
 main = do
     x <- script <$> getRecord "Platform Deployment"
@@ -28,9 +27,4 @@ scripts =
     [ ("nsss",nsss)
     , ("nsss2",nsss2)
     , ("kiss",kiss)
-    , ("nes",noneExistentSecret)
-    , ("nesa",noneExistentSecretAttached)
-    , ("sdt", secretDeclaredTwice)
-    , ("sat",secretAttachedTwice)
-    , ("cdne",containerDoesNotExists)
     ]

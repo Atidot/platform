@@ -138,6 +138,7 @@ test-suite platform-deployment-test
   type: exitcode-stdio-1.0
   main-is: Spec.hs
   other-modules:
+      Spec.TestScripts
       Paths_platform_deployment
   hs-source-dirs:
       test

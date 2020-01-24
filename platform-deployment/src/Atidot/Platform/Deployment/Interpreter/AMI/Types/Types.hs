@@ -5,6 +5,7 @@ module Atidot.Platform.Deployment.Interpreter.AMI.Types.Types where
 import "base" Data.Data (Data)
 import "base" Data.Typeable (Typeable)
 import "base" GHC.Generics (Generic)
+import "aeson" Data.Aeson (ToJSON, FromJSON, toEncoding, genericToEncoding, defaultOptions)
 import "text" Data.Text (Text)
 import "uuid" Data.UUID
 
@@ -24,6 +25,11 @@ data AMIConfig =
     }
     deriving (Show, Read, Eq, Ord, Data, Typeable, Generic)
 
+instance ToJSON AMIConfig where
+    toEncoding = genericToEncoding defaultOptions
+
+instance FromJSON AMIConfig
+
 data TerraformConfig =
     TerraformConfig
     { _TerraformConfig_region                :: !Text
@@ -41,3 +47,8 @@ data TerraformConfig =
     , _TerraformConfig_ebs_volume            :: !Text
     }
     deriving (Show, Read, Eq, Ord, Data, Typeable, Generic)
+
+instance ToJSON TerraformConfig where
+    toEncoding = genericToEncoding defaultOptions
+
+instance FromJSON TerraformConfig

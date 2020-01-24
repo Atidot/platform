@@ -1,14 +1,18 @@
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE PackageImports #-}
 {-# LANGUAGE QuasiQuotes #-}
 module Atidot.Platform.Deployment.Interpreter.Terraform.Template where
 
 import           "text"           Data.Text (Text)
 import           "base"           Data.Char
 import           "base"           Data.Maybe
+import           "base"           GHC.Generics (Generic)
 import           "ginger"         Text.Ginger
 import           "raw-strings-qq" Text.RawString.QQ
 import           "mtl"            Control.Monad.Writer (Writer)
 import           "data-default"   Data.Default
 import           "filepath"       System.FilePath
+import           "aeson"          Data.Aeson (ToJSON, FromJSON, toEncoding, genericToEncoding, defaultOptions)
 import           "extra"          Data.Tuple.Extra
 import qualified "containers"     Data.Map as M
 import qualified "text"           Data.Text as T
@@ -34,6 +38,11 @@ instance Default TerraformExtendedConfig where
             placeHoldersPhysicalDiskMappings
             placeHolderAwsEbsVolumes
 
+instance ToJSON TerraformExtendedConfig where
+    toEncoding = genericToEncoding defaultOptions
+
+instance FromJSON TerraformExtendedConfig
+
 type Cmd = String
 type SecretName = String
 type DiskName = String
@@ -52,7 +61,7 @@ data TerraformExtendedConfig = TerraformExtendedConfig
     , _TerraformExtendedConfig_dockers :: DockerInfo
     , _TerraformExtendedConfig_terraformConfig :: TerraformConfig
     , _TerraformExtendedConfig_availableDisks :: [(DeviceName,VolumeName)]
-    }
+    } deriving (Show, Generic)
 
 renderTerraform :: TerraformExtendedConfig -> Text
 renderTerraform (TerraformExtendedConfig prepCmds cmds disks secrets dockers tconf _) =

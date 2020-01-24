@@ -23,12 +23,14 @@ import "platform-packaging"       Platform.Packaging.PythonImports
 import "platform-packaging-types" Platform.Packaging.Types (ContainerEnv)
 import                            Atidot.Platform.Deployment
 import                            Atidot.Platform.Deployment.Interpreter.Terraform
+import                            Atidot.Platform.Deployment.Interpreter.Terraform.Template
 import                            Atidot.Platform.Deployment.Interpreter.AMI.Types
 
 data CLI
   = Execute
   { input :: String
-  , env :: Maybe String
+  , dockerenv :: Maybe String
+  , config :: Maybe String
   } deriving (Generic, Show)
 
 instance ParseRecord CLI where
@@ -42,7 +44,8 @@ instance Exception PkgDepException
 main :: IO ()
 main = getRecord "Packaging Deployment" >>= \record -> do
     let fp = input record
-    let env' = fmap B8.pack (env record) >>= decode :: Maybe ContainerEnv
+    let env' = fmap B8.pack (dockerenv record) >>= decode :: Maybe ContainerEnv
+    let terraformConfig = fmap B8.pack (config record) >>= decode :: Maybe TerraformExtendedConfig
     isDir <- doesDirectoryExist fp
     modules <- if isDir
                   then do
@@ -52,7 +55,7 @@ main = getRecord "Packaging Deployment" >>= \record -> do
                       hGetContents handle
     docker <- pythonToContainerEnv modules $ maybe testingEnv id env'
     rootDir <- dockerRootDir
-    runTerraform def $ do
+    runTerraform (maybe def id terraformConfig) $ do
         imageName <- makeContainer docker
         s <- secret placeHolderSecret
         dir <- mount placeHolderData
