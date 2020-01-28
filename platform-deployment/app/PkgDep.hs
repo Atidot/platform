@@ -3,7 +3,7 @@
 {-# LANGUAGE OverloadedStrings  #-}
 module PkgDep where
 
-import "base"                     Data.Maybe (maybe)
+import "base"                     Data.Maybe (fromMaybe)
 import "base"                     Data.Typeable (Typeable)
 import "base"                     Data.Monoid (mempty)
 import "base"                     GHC.Generics (Generic)
@@ -28,8 +28,7 @@ import                            Atidot.Platform.Deployment.Interpreter.AMI.Typ
 
 data CLI
   = Execute
-  { input :: String
-  , dockerenv :: Maybe String
+  { dockerenv :: Maybe String
   , config :: Maybe String
   } deriving (Generic, Show)
 
@@ -43,30 +42,12 @@ instance Exception PkgDepException
 
 main :: IO ()
 main = getRecord "Packaging Deployment" >>= \record -> do
-    let fp = input record
-    let env' = fmap B8.pack (dockerenv record) >>= decode :: Maybe ContainerEnv
-    let terraformConfig = fmap B8.pack (config record) >>= decode :: Maybe TerraformExtendedConfig
-    isDir <- doesDirectoryExist fp
-    modules <- if isDir
-                  then do
-                      fmap T.unpack $ recursivelyConcatenate fp
-                  else do
-                      handle <- openFile fp ReadMode
-                      hGetContents handle
-    docker <- pythonToContainerEnv modules $ maybe testingEnv id env'
-    rootDir <- dockerRootDir
-    runTerraform (maybe def id terraformConfig) $ do
-        imageName <- makeContainer docker
+    let env' = fromMaybe def $ fmap B8.pack (dockerenv record) >>= decode :: ContainerEnv
+    let terraformConfig = fromMaybe def $ fmap B8.pack (config record) >>= decode :: TerraformExtendedConfig
+    runTerraform terraformConfig $ do
+        imageName <- makeContainer env' "/path/to/python/lib" -- docker
         s <- secret placeHolderSecret
         dir <- mount placeHolderData
-        c <- container $ rootDir <> "/containers/" <> imageName
+        c <- container imageName -- rootDir <> "/containers/" <> imageName
         attachSecret s c
         attachVolume dir c
-
-dockerRootDir :: IO Text
-dockerRootDir = do
-    info <- fmap T.unpack . strict
-          $ inproc "docker" ["info"]
-          $ select . textToLines $ ""
-    let matchedDir = info =~ ("(?<=^Docker Root Dir: ).+$" :: String) :: AllTextMatches [] String
-    return . T.pack . head . getAllTextMatches $ matchedDir

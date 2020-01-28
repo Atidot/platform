@@ -6,14 +6,17 @@ import           "extra"      Data.Tuple.Extra
 import qualified "containers" Data.Map as M
 import           "dockerfile" Data.Docker (dockerfile)
 import qualified "text"       Data.Text as T
-import           "exceptions" Control.Monad.Catch
+import           "exceptions" Control.Monad.Catch hiding (handle)
 import           "free"       Control.Monad.Free
 import           "mtl"        Control.Monad.State
-import           "directory"  System.Directory
 import           "turtle"     Turtle hiding (x, s, d,FilePath, fp)
 import           "filepath"   System.FilePath
-import           "platform-packaging" Platform.Packaging (toDocker)
+import           "platform-packaging" Platform.Packaging (toDocker,pythonToContainerEnv)
 import           "platform-packaging-types" Platform.Packaging.Types (ContainerEnv)
+import           "regex-pcre" Text.Regex.PCRE
+import "base"                     System.IO hiding (stdin)
+import "directory"                System.Directory (doesDirectoryExist, doesFileExist)
+import "platform-packaging"       Platform.Packaging.PythonImports
 
 import       Atidot.Platform.Deployment.Interpreter.Utils
 import       Atidot.Platform.Deployment.Interpreter.Terraform.Template
@@ -43,7 +46,7 @@ runTerraform config dep =
         run :: Deployment (StateT TerraformExtendedConfig IO a)
             -> StateT TerraformExtendedConfig IO a
         run (Container containerName next) = do
-            pathExists <- lift $ doesPathExist $ T.unpack containerName
+            pathExists <- lift $ doesFileExist $ T.unpack containerName
             if pathExists
                 then do
                     let fp = T.unpack containerName
@@ -91,9 +94,29 @@ runTerraform config dep =
                 cmd = ["docker","run"] ++ map T.unpack containerEngineArgs ++ concat dirs' ++ concat secrets' ++ [name'] ++ map T.unpack containerArgs
             updateExec cmd
             next
-        run (MakeContainer containerEnv next) = do
-            dockerId <- buildDocker containerEnv
-            next dockerId
+        run (MakeContainer containerEnv fp next) = do
+            let fp' = T.unpack fp
+            isDir <- lift $ doesDirectoryExist $ fp'
+            modules <- if isDir
+                          then lift $
+                              fmap T.unpack $ recursivelyConcatenate fp'  --
+                          else lift $ do
+                              handle <- openFile fp' ReadMode  --
+                              hGetContents handle
+            docker <- lift $ pythonToContainerEnv modules containerEnv
+            rootDir <- lift $ dockerRootDir
+            dockerId <- lift $ buildDocker docker
+            let dockerDir = rootDir <> "/containers/" <> dockerId
+            next dockerDir
+
+
+dockerRootDir :: IO Text
+dockerRootDir = do
+    info <- fmap T.unpack . strict
+          $ inproc "docker" ["info"]
+          $ select . textToLines $ ""
+    let matchedDir = info =~ ("(?<=^Docker Root Dir: ).+$" :: String) :: AllTextMatches [] String
+    return . T.pack . head . getAllTextMatches $ matchedDir
 
 buildDocker :: MonadIO m
             => ContainerEnv

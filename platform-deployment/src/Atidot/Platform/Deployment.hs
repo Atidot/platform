@@ -30,7 +30,7 @@ data Deployment a
     | AttachVolume FolderDir Name a
     -- execution
     | Execute [Arg] Name [Arg] a
-    | MakeContainer ContainerEnv (Name -> a)
+    | MakeContainer ContainerEnv Name (Name -> a)
     deriving (Typeable, Functor)
 
 type DeploymentM = Free Deployment
