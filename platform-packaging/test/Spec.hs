@@ -2,10 +2,11 @@
 {-# LANGUAGE PackageImports    #-}
 module Main where
 
-import "base"               Control.Exception (evaluate)
-import "hspec"              Test.Hspec
-import "QuickCheck"         Test.QuickCheck
-import "platform-packaging" Platform.Packaging.PythonImports.Internal
+import "base"                     Control.Exception (evaluate)
+import "hspec"                    Test.Hspec
+import "QuickCheck"               Test.QuickCheck
+import "platform-packaging"       Platform.Packaging.PythonImports.Internal.Annotation
+import "platform-packaging-types" Platform.Packaging.PythonImports.Types
 
 main :: IO ()
 main = hspec platformPackagingPythonImports

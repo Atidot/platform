@@ -16,6 +16,7 @@ extra-source-files:  CHANGELOG.md
 library
   exposed-modules: Platform.Packaging.Pip.Types
                  , Platform.Packaging.Types
+                 , Platform.Packaging.PythonImports.Types
   other-modules:   Platform.Packaging.Pip.Types.Utils
                  , Platform.Packaging.Pip.Types.Check
                  , Platform.Packaging.Pip.Types.Debug
@@ -37,6 +38,7 @@ library
                      , aeson
                      , containers
                      , data-default
+                     , exceptions
                      , text
   hs-source-dirs:      src
   default-language:    Haskell2010
