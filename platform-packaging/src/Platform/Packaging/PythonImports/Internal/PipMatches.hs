@@ -70,18 +70,6 @@ findPossibleMatches mn = do
         concatenatedSubNames = map (T.intercalate "-" . flip take subNames) [1..length subNames]
         subNames             = split (== '.') . _moduleName $ mn
 
-findMatch :: (MonadMask m, MonadIO m)
-          => ModuleName
-          -> [PyPkg]
-          -> m (Maybe PyPkg)
-findMatch mn pkgs = do
-    candidates <- filterM filterCondition pkgs
-    if null candidates
-       then return Nothing
-       else return . return . head $ candidates
-    where
-        filterCondition pkg = handleAll (\_ -> return False) (fmap (== PkgContainsModule) $ isModuleInPkg mn pkg)
-
 -- for TopLevel.MidLevel.ModName, this would guess
 --   "TopLevel" > "TopLevel MidLevel" > "TopLevel MidLevel ModName"
 -- > "MidLevel" > "MidLevel ModName" > "ModName"
@@ -94,11 +82,10 @@ pkgGuesses = map (pack . unwords) . supLevelSets . map ident_string
 -- DottedName annot = [Ident annot]
 -- [Ident annot] -> [String] -> String -> Text
 
-isModuleInPkg :: (MonadMask m, MonadIO m)
-              => ModuleName
-              -> PyPkg
-              -> m PkgVerdict
-isModuleInPkg modName pkg = handleAll (const . return $ Inconclusive) $
+modulesInPkg :: (MonadMask m, MonadIO m)
+              => PyPkg
+              -> m [ModuleName]
+modulesInPkg pkg = handleAll (const . return $ mempty) $
     bracket init'
             fini
             body
@@ -118,12 +105,9 @@ isModuleInPkg modName pkg = handleAll (const . return $ Inconclusive) $
             downloadPkg pkg
             downloadedPkg <- liftIO $ headIfLengthIsOne =<< listDirectory dlDir
             pkgType <- determinePkgType downloadedPkg
-            modulesInPkg <- if pkgType == TarPackage
-                               then genericWrapper tarAction dlDir
-                               else genericWrapper wheelAction dlDir
-            if modName `elem` modulesInPkg
-               then return PkgContainsModule
-               else return PkgLacksModule
+            if pkgType == TarPackage
+               then genericWrapper tarAction dlDir
+               else genericWrapper wheelAction dlDir
 
         determinePkgType fp = do
             let isTar   = fp =~ tarRegex
