@@ -10,7 +10,7 @@ import           "base"                     Control.Monad (join, when, unless, f
 import           "base"                     Data.Typeable (Typeable)
 import           "base"                     Data.Data (Data)
 import           "base"                     Data.List (foldl', intercalate, isSuffixOf, partition, sortBy, (\\))
-import           "base"                     Data.Maybe (isJust, fromJust)
+import           "base"                     Data.Maybe (isJust, fromJust, listToMaybe)
 import           "base"                     GHC.Generics (Generic)
 import           "aeson"                    Data.Aeson (FromJSON, ToJSON, toEncoding, genericToEncoding, defaultOptions)
 import           "data-default"             Data.Default (def)
@@ -34,6 +34,7 @@ import           "shellmet"                 Shellmet
 import           "platform-packaging-types" Platform.Packaging.Pip.Types
 import           "platform-packaging-types" Platform.Packaging.PythonImports.Types
 import                                      Platform.Packaging.PythonImports.Internal.Utils
+import                                      Platform.Packaging.PythonImports.Internal.PipMatches.Parse (setupCfg)
 import                                      Platform.Packaging.Pip
 
 makeLenses ''GeneralOpts
@@ -78,9 +79,6 @@ pkgGuesses :: DottedName annot -> [Text]
 pkgGuesses = map (pack . unwords) . supLevelSets . map ident_string
     where supLevelSets (x:xs) = (x:xs) : supLevelSets xs
           supLevelSets [] = []
-
--- DottedName annot = [Ident annot]
--- [Ident annot] -> [String] -> String -> Text
 
 modulesInPkg :: (MonadMask m, MonadIO m)
               => PyPkg
@@ -139,6 +137,12 @@ tarRegex = "\\.tar\\.gz$"
 wheelRegex :: String
 wheelRegex = "\\.whl"
 
+setupCfgRegex :: String
+setupCfgRegex = "setup.cfg$"
+
+setupPyRegex :: String
+setupPyRegex = "setup.py$"
+
 -- genericWrapper gives the modules exported by a package.
 -- This function should be provided the filepath to a folder
 -- containing a single .whl file.
@@ -196,12 +200,12 @@ getModuleNames :: (MonadCatch m, MonadIO m)
 getModuleNames topLevelFile prefix = do
     topLevelFileExists <- liftIO . doesFileExist $ topLevelFile
     unless topLevelFileExists (throwM NoTopLevelFile)
-    topLevelModuleNames <- liftIO
-                         . fmap T.lines
-                         . TIO.readFile
-                         $ topLevelFile
-    let topLevelModules     = map ModuleName                      topLevelModuleNames
-        topLevelModulePaths = map (\mn -> prefix <> "/" <> unpack mn) topLevelModuleNames
+    topLevelModuleText <- liftIO
+                           . fmap T.lines
+                           . TIO.readFile
+                           $ topLevelFile
+    let topLevelModules     = map ModuleName                          topLevelModuleText
+        topLevelModulePaths = map (\mn -> prefix <> "/" <> unpack mn) topLevelModuleText
     subModules <- fmap concat
                 . sequence
                 $ map (enumerateSubmodules (prefix <> "/")) topLevelModulePaths
@@ -224,6 +228,8 @@ tarAction fp = do
                  . fmap (filter (`notElem` originalContents))
                  . listDirectory
                  $ fp
+    let setupConfig = listToMaybe $ filter (=~ setupCfgRegex) newContents
+        setup       = listToMaybe $ filter (=~ setupPyRegex)  newContents
     subdirs <- liftIO $ filterM doesDirectoryExist newContents
     eggInfoDirs <- liftIO
                  . fmap concat

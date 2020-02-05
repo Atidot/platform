@@ -23,6 +23,7 @@ library
                     , Platform.Packaging.PythonImports
                     , Platform.Packaging.PythonImports.Internal.Annotation
                     , Platform.Packaging.PythonImports.Internal.PipMatches
+                    , Platform.Packaging.PythonImports.Internal.PipMatches.Parse
                     , Platform.Packaging.PythonImports.Internal.Utils
   -- other-extensions:
   build-depends:       base
@@ -41,6 +42,7 @@ library
                      , shellmet
                      , dockerfile
                      , mtl
+                     , parsec
                      , temporary
                      , exceptions
                      , platform-types
