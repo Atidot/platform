@@ -7,7 +7,7 @@ import           "aeson"                   Data.Aeson (encode)
 import           "optparse-applicative"    Options.Applicative
 import           "platform-types"          Platform.Types
 import           "platform-dsl"            Platform.DSL
-import           "platform-process"        Platform.Process
+import                                     Platform.Harness
 
 main :: IO ()
 main = do

@@ -3,9 +3,9 @@ cabal-version:       2.2
 -- 'cabal init'.  For further documentation, see
 -- http://haskell.org/cabal/users-guide/
 
-name:                platform-process
+name:                platform-harness
 version:             0.1.0.0
-synopsis:            Platform Procses
+synopsis:            Platform Harness
 -- description:
 homepage:            github.com/atidot/platform
 -- bug-reports:
@@ -18,7 +18,7 @@ category:            Other
 extra-source-files:  CHANGELOG.md
 
 library
-  exposed-modules:    Platform.Process
+  exposed-modules:    Platform.Harness
   -- other-modules:
   -- other-extensions:
   build-depends:       base
@@ -35,7 +35,7 @@ library
   hs-source-dirs:      src
   default-language:    Haskell2010
 
-test-suite platform-process-test
+test-suite platform-harness-test
   type:             exitcode-stdio-1.0
   hs-source-dirs:   test
   main-is:          Spec.hs
@@ -43,11 +43,11 @@ test-suite platform-process-test
                   , hspec
                   , platform-types
                   , platform-dsl
-                  , platform-process
+                  , platform-harness
   ghc-options:      -Wall
   default-language: Haskell2010
 
-executable platform-process
+executable platform-harness
   main-is:             Main.hs
   -- other-modules:
   -- other-extensions:
@@ -58,6 +58,6 @@ executable platform-process
                      , optparse-applicative
                      , platform-types
                      , platform-dsl
-                     , platform-process
+                     , platform-harness
   hs-source-dirs:      app
   default-language:    Haskell2010

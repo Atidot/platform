@@ -24,15 +24,15 @@ import "platform-dsl"   Platform.DSL
 -- TODO: move to another file
 type AWSConfig = ()
 
-
 data AWSState
     = AWSState
     { _awsState_template :: !Template
+    , _awsState_rabbitmqClient :: !(Maybe ContainerID)
     } deriving (Show, Eq)
 makeLenses ''AWSState
 
 instance Default AWSState where
-    def = AWSState (template $ Resources [])
+    def = AWSState (template $ Resources []) Nothing
 
 ---------
 runAWS :: (Monad m, MonadState AWSState m, MonadMask m)
@@ -44,7 +44,11 @@ runAWS config script
               fini
               body
     where
-        init'  = return ()
+        init'  = do
+            rabbitID <- run (Container "rabbitmq" (return))
+            assign awsState_rabbitmqClient (Just rabbitID)
+            return rabbitID
+
         fini _ = return ()
         body _ = do
             result <- iterM run script

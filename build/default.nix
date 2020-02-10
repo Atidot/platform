@@ -11,6 +11,7 @@ let
     platform-dsl
     platform-aws
     platform-kube
+    platform-harness
     platform-process
     platform-packaging
     platform-packaging-types
