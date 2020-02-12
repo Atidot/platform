@@ -72,9 +72,19 @@ runAWS config script
             let newContainer = ContainerID name
             return' newContainer
 
+        run (Queue (QueueID name)
+                   return'
+            ) = do
+            return'
 
-        run (Connection (ContainerID name1)
-                        (ContainerID name2)
-                        return'
+        run (Produce (ContainerID name1)
+                     (QueueID name2)
+                      return'
+            ) = do
+            return'
+
+        run (Consume (ContainerID name1)
+                     (QueueID name2)
+                      return'
             ) = do
             return'

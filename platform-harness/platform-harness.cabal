@@ -24,9 +24,10 @@ library
   build-depends:       base
                      , lens
                      , aeson
+                     , extra
                      , mtl
                      , exceptions
-                     , shelly
+                     , turtle
                      , data-default
                      , text
                      , free
@@ -54,7 +55,7 @@ executable platform-harness
   build-depends:       base
                      , bytestring
                      , aeson
-                     , shelly
+                     , turtle
                      , optparse-applicative
                      , platform-types
                      , platform-dsl

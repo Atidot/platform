@@ -26,7 +26,7 @@ type ProcessConfig = ()
 
 -- The separation of connectionActions and containerActions allows
 -- the two to be sequenced. That is, all containerActions occur
--- before the connectionActions begin. 
+-- before the connectionActions begin.
 data ProcessState
     = ProcessState
         { _processState_containers :: ![ContainerID]
@@ -34,7 +34,7 @@ data ProcessState
         , _processState_containerActions :: !(Sh ())
         , _processState_connectionActions :: !(Sh ())
         , _processState_actions :: !(Sh ())
-        } 
+        }
 makeLenses ''ProcessState
 
 instance Default ProcessState where
@@ -65,9 +65,8 @@ runProcess config script
             containerActions <- gets _processState_containerActions
             connectionActions <- gets _processState_connectionActions
             processState_actions .= (containerActions >> connectionActions)
-            
             return result
-            
+
 
         run :: (Monad m, MonadState ProcessState m, MonadMask m)
             => PlatformCmd (m a)
@@ -78,13 +77,13 @@ runProcess config script
             let newContainer = ContainerID name
             return' newContainer
 
-        run (Connection (ContainerID name1)
-                        (ContainerID name2)
-                        return'
-            ) = do
-            as <- gets _processState_connectionActions
-            processState_connectionActions .= (as >> connect name1 name2)
-            return'
+--        run (Produce (ContainerID c)
+--                     (QueueID q)
+--                     return'
+--            ) = do
+--            as <- gets _processState_connectionActions
+--            processState_connectionActions .= (as >> connect name1 name2)
+--            return'
 
 -- These magic functions should be replaced by some image-selection logic
 producerPath :: Text
@@ -98,8 +97,8 @@ launch "atidot/producer" = dummyLaunch -- startDockerLocal producerPath
 launch "atidot/consumer" = pure () --startDockerLocal consumerPath
 launch _ = undefined
 
-connect :: Text 
-        -> Text 
+connect :: Text
+        -> Text
         -> Sh ()
 connect "atidot/producer" "atidot/consumer" = pure ()
 connect _ _ = undefined
@@ -118,7 +117,7 @@ dummyLaunch = do
     consumerImage <- run docker ["build", "-q", consumerPath]
     consumerID <- run docker ["create", strip consumerImage]
     run_ docker ["start", strip consumerID]
-    
+
 
 -- TODO: expand this to actually do something
 -- switch from run_ (which suppresses stdout) to run (which returns stdout)
@@ -129,7 +128,7 @@ startDocker args = do
 
 startDockerDefault :: Text -> Sh ()
 startDockerDefault image = do
-    run_ docker ["pull", image] 
+    run_ docker ["pull", image]
     dockerID <- run docker ["create", image]
     startDocker [dockerID]
 

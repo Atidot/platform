@@ -1,5 +1,8 @@
 import os
 
+def amqpURL():
+    return os.environ.getenv('PLATFORM_AMQP_URL', '')
+
 def platformCheck():
     s = os.environ.getenv('PLATFORM_HARNESS', '')
     if s == '1':
@@ -9,25 +12,13 @@ def platformCheck():
 
 # The harness module provides environment variables and queues
 def consumers():
-    l = os.environ.getenv('ATIDOT_CONSUMERS', '')
-    validateConsumers(l)
-    consumerList = list()
-    for elt in l:
-        d = dict()
-        pairs = elt.split(',')
-        for pair in pairs:
-            p = pair.split('=')
-            key, val = p[0], p[1]
-            d[key] = val
-        consumerList.append(Entity(**d))
-    return consumerList
-
-def validateConsumers(l):
-    pass
+    return getPairs('PLATFORM_CONSUMERS')
 
 def producers():
-    l = os.environ.getenv('ATIDOT_PRODUCERS', '')
-    validateProducers(l)
+    return getPairs('PLATFORM_PRODUCERS')
+
+def getPairs(envVar):
+    l = os.environ.getenv(envVar, '')
     producerList = list()
     for elt in l:
         d = dict()
@@ -38,6 +29,3 @@ def producers():
             d[key] = val
         producerList.append(Entity(**d))
     return producerList
-
-def validateConsumers(l):
-    pass

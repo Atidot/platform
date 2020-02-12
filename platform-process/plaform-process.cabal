@@ -41,6 +41,9 @@ test-suite platform-process-test
   main-is:          Spec.hs
   build-depends:    base
                   , hspec
+                  , data-default
+                  , mtl
+                  , shelly
                   , platform-types
                   , platform-dsl
                   , platform-process

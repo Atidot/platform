@@ -22,6 +22,7 @@ import "platform-dsl"   Platform.DSL
 
 ---------
 -- TODO: move to another file
+-- TODO: Make the visualization distinguish queues and nodes.
 type VisualConfig = ()
 
 
@@ -79,17 +80,29 @@ runVisual config script
             let newContainer = ContainerID name
             return' newContainer
 
+        run (Queue queueID return') = do
+            visualState_nodes <>= [_queueID_name queueID]
+            return'
 
-        run (Connection (ContainerID name1)
-                        (ContainerID name2)
-                        return'
+        run (Produce (ContainerID name1)
+                     (QueueID name2)
+                     return'
             ) = do
             -- add an edge to the graph
             visualState_edges <>= [(name1, name2, "TODO")]
             return'
 
+        run (Consume (ContainerID name1)
+                     (QueueID name2)
+                     return'
+            ) = do
+            -- add an edge to the graph
+            visualState_edges <>= [(name1, name2, "TODO")]
+            return'
 
-toFGL :: [Text] -> [(Text, Text, Text)] -> Gr Text Text
+toFGL :: [Text]               -- ^ Nodes
+      -> [(Text, Text, Text)] -- ^ Edges
+      -> Gr Text Text
 toFGL ns es = graph
     where
         uniqNs :: [Text]
@@ -99,12 +112,12 @@ toFGL ns es = graph
         label  = fromJust . flip elemIndex uniqNs
 
         lNodes :: [(Int, Text)]
-        lNodes = map (\n -> (label n, n)) ns
+        lNodes = map (\n -> (label n, n)) $ ns
 
         lEdges :: [(Int, Int, Text)]
         lEdges = map (\(n1, n2, t) -> (label n1, label n2, t)) es
 
         graph :: Gr Text Text
-        graph  = mkGraph lNodes lEdges
+        graph  = mkGraph (lNodes) lEdges
 
 
