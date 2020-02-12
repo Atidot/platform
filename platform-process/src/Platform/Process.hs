@@ -61,6 +61,7 @@ runProcess config script
         body _ = do
             -- TODO: change things so that containers are given a harness
             -- based on the connections they are a part of
+            launchRabbitServer
             result <- iterM run script
             containerActions <- gets _processState_containerActions
             connectionActions <- gets _processState_connectionActions
@@ -77,13 +78,22 @@ runProcess config script
             let newContainer = ContainerID name
             return' newContainer
 
---        run (Produce (ContainerID c)
---                     (QueueID q)
---                     return'
---            ) = do
---            as <- gets _processState_connectionActions
---            processState_connectionActions .= (as >> connect name1 name2)
---            return'
+        run (Produce (ContainerID c)
+                     (QueueID q)
+                     return'
+            ) = do
+            as <- gets _processState_connectionActions
+            processState_connectionActions .= (as >> connect name1 name2)
+            return'
+
+        run (Consume (ContainerID c)
+                     (QueueID q)
+                     return'
+            ) = do
+            as <- gets _processState_connectionActions
+            processState_connectionActions .= (as >> connect name1 name2)
+            return'
+
 
 -- These magic functions should be replaced by some image-selection logic
 producerPath :: Text
@@ -105,6 +115,12 @@ connect _ _ = undefined
 
 docker :: Shelly.FilePath
 docker = fromText "/usr/bin/docker"
+
+launchRabbitServer :: Sh ()
+launchRabbitServer = do
+    run_ docker ["pull", "rabbitmq"]
+    rabbitID <- run docker ["create", "rabbitmq"]
+    run_ docker ["start", strip rabbitID]
 
 dummyLaunch :: Sh ()
 dummyLaunch = do

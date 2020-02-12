@@ -65,7 +65,7 @@ runHarness config script
         body _ = do
             result <- iterM run script
             export "PLATFORM_AMQP_URL" =<< _harnessState_amqpURL <$> ask
-            export "PLATFORM_HARNESS" "1" -- Set this last to help indicate partial execution
+            export "PLATFORM_HARNESS" "1" -- Set this last to allow detection of partial execution
             return result
 
         run :: (MonadIO m, MonadReader HarnessState m, MonadMask m)
