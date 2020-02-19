@@ -6,18 +6,22 @@
 {-# LANGUAGE FlexibleContexts #-}
 module Platform.Process where
 
-import           "base"           Control.Monad.IO.Class (MonadIO, liftIO)
-import           "base"           Data.Maybe (fromJust)
-import           "lens"           Control.Lens
-import           "data-default"   Data.Default (Default, def)
-import           "text"           Data.Text (Text, append, unpack, drop, strip)
-import qualified "text"           Data.Text as T
-import           "mtl"            Control.Monad.State.Class (MonadState, gets)
-import           "exceptions"     Control.Monad.Catch (MonadMask, bracket)
-import           "free"           Control.Monad.Free
-import           "platform-types" Platform.Types
-import           "platform-dsl"   Platform.DSL
-import           "shelly"         Shelly
+import           "base"                     Control.Monad.IO.Class (MonadIO, liftIO)
+import           "base"                     Data.Maybe (fromJust)
+import           "lens"                     Control.Lens
+import           "data-default"             Data.Default (Default, def)
+import           "text"                     Data.Text (Text, append, unpack, drop, strip)
+import qualified "text"                     Data.Text as T
+import           "mtl"                      Control.Monad.State.Class (MonadState, gets)
+import           "mtl"                      Control.Monad.Writer.Lazy (MonadWriter, runWriterT)
+import           "exceptions"               Control.Monad.Catch (MonadMask, bracket)
+import           "free"                     Control.Monad.Free
+import           "platform-types"           Platform.Types
+import           "platform-dsl"             Platform.DSL
+import           "shelly"                   Shelly
+import           "platform-harness"         Platform.Harness.Types (HarnessScript(..))
+import           "platform-packaging"       Platform.Packaging
+import           "platform-packaging-types" Platform.Packaging.Types
 
 -- TODO: The sequencing in `body` and in `run` has no error-detection.
 
@@ -33,7 +37,6 @@ data ProcessState
         , _processState_connections :: ![(ContainerID, ContainerID)]
         , _processState_containerActions :: !(Sh ())
         , _processState_connectionActions :: !(Sh ())
-        , _processState_actions :: !(Sh ())
         }
 makeLenses ''ProcessState
 
@@ -42,12 +45,11 @@ instance Default ProcessState where
                        []
                        (return ())
                        (return ())
-                       platformSetup
 
 -- currently, calls to runProcess call `dummyRun` when atidot/producer is launched,
 -- and otherwise does nothing. I have this at a level of proof-of-concept to see
 -- how to bring Docker, Shelly and Haskell together to launch Python apps.
-runProcess :: (Monad m, MonadState ProcessState m, MonadMask m)
+runProcess :: (Monad m, MonadIO m, MonadWriter HarnessScript m, MonadState ProcessState m, MonadMask m)
            => ProcessConfig
            -> Platform a
            -> m a
@@ -56,44 +58,25 @@ runProcess config script
               fini
               body
     where
-        init' = return ()
+        init' = shelly . startDockerDefault $ "rabbitmq:latest"
         fini _ = return ()
-        body _ = do
-            -- TODO: change things so that containers are given a harness
-            -- based on the connections they are a part of
-            launchRabbitServer
+        body amqpContainer = do
             result <- iterM run script
-            containerActions <- gets _processState_containerActions
-            connectionActions <- gets _processState_connectionActions
-            processState_actions .= (containerActions >> connectionActions)
             return result
 
-
-        run :: (Monad m, MonadState ProcessState m, MonadMask m)
+        run :: (Monad m, MonadIO m, MonadWriter HarnessScript m, MonadState ProcessState m, MonadMask m)
             => PlatformCmd (m a)
             -> m a
         run (Container name return') = do
-            as <- gets _processState_containerActions
-            processState_containerActions .= (as >> launch name)
-            let newContainer = ContainerID name
+            newContainer <- shelly $ ContainerID <$> startDockerLocal name
             return' newContainer
 
-        run (Produce (ContainerID c)
-                     (QueueID q)
-                     return'
-            ) = do
-            as <- gets _processState_connectionActions
-            processState_connectionActions .= (as >> connect name1 name2)
+        run (Queue queueID return') = do
+            undefined -- Declare all of the queues to the amqpContainer
             return'
 
-        run (Consume (ContainerID c)
-                     (QueueID q)
-                     return'
-            ) = do
-            as <- gets _processState_connectionActions
-            processState_connectionActions .= (as >> connect name1 name2)
-            return'
-
+        run (Produce _ _ return') = return'
+        run (Consume _ _ return') = return'
 
 -- These magic functions should be replaced by some image-selection logic
 producerPath :: Text
@@ -142,16 +125,19 @@ startDocker :: [Text] -> Sh ()
 startDocker args = do
     run_ docker (["start"] ++ args)
 
-startDockerDefault :: Text -> Sh ()
+startDockerDefault :: Text -> Sh Text
 startDockerDefault image = do
     run_ docker ["pull", image]
     dockerID <- run docker ["create", image]
     startDocker [dockerID]
+    return dockerID
 
-startDockerLocal :: Text -> Sh ()
+startDockerLocal :: Text -> Sh Text
 startDockerLocal image = do
     dockerIDRaw <- run docker ["build", "-q", image]
-    startDocker [getDockerID dockerIDRaw]
+    let dockerID = getDockerID dockerIDRaw
+    startDocker [dockerID]
+    return dockerID
 
 -- this should check for well-formed input
 -- inputs look like "sha256:d0ca3dadf...."
@@ -161,7 +147,7 @@ getDockerID input = T.drop 7 input
 newPath :: Text
 newPath = "$PATH:/home/atidot/platform/static/testDockers/consumer:/home/atidot/platform/static/testDockers/producer"
 
-platformSetup :: Sh ()
+platformSetup :: Sh Text
 platformSetup = do
     setenv "PATH" newPath
     startDockerLocal "rabbitmq"

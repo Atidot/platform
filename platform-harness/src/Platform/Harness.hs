@@ -3,6 +3,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 module Platform.Harness where
 
+import "base" Data.Foldable (mapM_)
 import "base" Data.Functor ((<&>))
 import "base" Data.Semigroup ((<>))
 import "base" Control.Monad (when)
@@ -11,11 +12,11 @@ import "text" Data.Text (Text, append, splitOn)
 import "extra" Control.Monad.Extra (whenM)
 import "mtl" Control.Monad.Reader (MonadReader, ask)
 import "exceptions" Control.Monad.Catch (MonadMask, bracket)
-import "free" Control.Monad.Free
 import "turtle" Turtle (Shell)
 import "turtle" Turtle.Prelude (need, export)
 import "platform-types" Platform.Types
-import "platform-dsl" Platform.DSL
+import                Platform.Harness.DSL
+import                Platform.Harness.Types
 
 newtype MessengerProfile = MessengerProfile { _messengerProfile_channelName :: Text }
 data HarnessState
@@ -53,8 +54,8 @@ getEnv = do
 
 runHarness :: (MonadIO m, MonadReader HarnessState m, MonadMask m)
            => HarnessConfig
-           -> Platform a
-           -> m a
+           -> HarnessScript
+           -> m ()
 runHarness config script
     = bracket init'
               fini
@@ -63,32 +64,27 @@ runHarness config script
         init' = return ()
         fini _ = return ()
         body _ = do
-            result <- iterM run script
+            mapM_ run $ commands script
             export "PLATFORM_AMQP_URL" =<< _harnessState_amqpURL <$> ask
             export "PLATFORM_HARNESS" "1" -- Set this last to allow detection of partial execution
-            return result
 
         run :: (MonadIO m, MonadReader HarnessState m, MonadMask m)
-            => PlatformCmd (m a)
-            -> m a
-        run (Container name return') = do
-            return' $ ContainerID name
+            => HarnessCmd
+            -> m ()
+        run (Queue queueID) = do
+            undefined
         run (Produce (ContainerID origin)
                      (QueueID dest)
-                     return'
             ) = do
             myName <- ask <&> _harnessState_containerName
             when (origin == myName)
                  (produceFor dest)
-            return'
         run (Consume (ContainerID dest)
                      (QueueID origin)
-                     return'
             ) = do
             myName <- ask <&> _harnessState_containerName
             when (dest == myName)
                  (consumeFrom origin)
-            return'
 
 -- If the harness is consuming from X, then X is considered a producer.
 consumeFrom :: MonadIO m

@@ -19,6 +19,8 @@ extra-source-files:  CHANGELOG.md
 
 library
   exposed-modules:    Platform.Harness
+                      Platform.Harness.DSL
+                      Platform.Harness.Types
   -- other-modules:
   -- other-extensions:
   build-depends:       base
@@ -30,6 +32,7 @@ library
                      , turtle
                      , data-default
                      , text
+                     , transformers
                      , free
                      , platform-types
                      , platform-dsl
@@ -54,9 +57,11 @@ executable platform-harness
   -- other-extensions:
   build-depends:       base
                      , bytestring
+                     , data-default
                      , aeson
-                     , turtle
-                     , optparse-applicative
+                     , mtl
+                     , text
+                     , optparse-generic
                      , platform-types
                      , platform-dsl
                      , platform-harness

@@ -15,7 +15,11 @@ import           "shelly"                  Shelly
 
 main :: IO ()
 main = do
-    newState <- flip execStateT def $ runProcess () DSL.testPrototype
-    let actions = _processState_actions newState
-    shelly actions
-    return ()
+    putStrLn "Testing"
+
+other :: IO ()
+other = return ()
+--    newState <- flip execStateT def $ runProcess () DSL.testPrototype
+--    let actions = _processState_actions newState
+--    shelly actions
+--    return ()
