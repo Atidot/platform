@@ -30,6 +30,7 @@ library
                      , lens
                      , aeson
                      , data-default
+                     , bytestring
                      , extra
                      , text
                      , free
@@ -46,6 +47,7 @@ library
                      , temporary
                      , exceptions
                      , platform-types
+                     , platform-harness
                      , platform-packaging-types
                      , platform-dsl
   hs-source-dirs:      src

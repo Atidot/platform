@@ -24,12 +24,14 @@ library
   build-depends:       base
                      , lens
                      , aeson
+                     , bytestring
                      , mtl
                      , exceptions
                      , shelly
                      , data-default
                      , text
                      , free
+                     , filepath
                      , platform-types
                      , platform-dsl
                      , platform-packaging

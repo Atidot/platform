@@ -58,8 +58,12 @@ executable platform-harness
   build-depends:       base
                      , bytestring
                      , data-default
+                     , directory
+                     , extra
                      , aeson
+                     , system-filepath
                      , mtl
+                     , shelly
                      , text
                      , optparse-generic
                      , platform-types

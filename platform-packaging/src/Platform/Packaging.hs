@@ -5,17 +5,21 @@
 {-# LANGUAGE TemplateHaskell #-}
 module Platform.Packaging where
 
+import "base"                     Data.Semigroup ((<>))
 import "base"                     Data.Foldable (foldl')
 import "base"                     Data.List (intercalate)
 import "base"                     Data.Typeable (Typeable)
 import "base"                     Data.Data (Data)
 import "base"                     GHC.Generics (Generic)
 import "lens"                     Control.Lens hiding (from)
+import "aeson"                    Data.Aeson (encode)
+import "bytestring"               Data.ByteString.Lazy.Char8 as B8 (unpack)
 import "containers"               Data.Map.Strict (assocs, empty)
 import "dockerfile"               Data.Docker
-import "text"                     Data.Text (unpack)
+import "text"                     Data.Text as T (unpack)
 import "regex-pcre"               Text.Regex.PCRE hiding (empty)
 import "platform-types"           Platform.Types
+import "platform-harness"         Platform.Harness.Types (HarnessScript)
 import "platform-packaging-types" Platform.Packaging.Types
 import                            Platform.Packaging.PythonImports
 
@@ -39,7 +43,7 @@ pythonToContainerEnv :: String
                      -> ContainerEnv
                      -> IO ContainerEnv
 pythonToContainerEnv module' env = do
-    pipModulesForInstall <- fmap (map (unpack . _pyPkg_name . snd) . fst)
+    pipModulesForInstall <- fmap (map (T.unpack . _pyPkg_name . snd) . fst)
                           $ runPythonImports module'
     let installPythonEnv = env & containerEnv_installations <>~ [("pip3 install -q", pipModulesForInstall)]
     return installPythonEnv

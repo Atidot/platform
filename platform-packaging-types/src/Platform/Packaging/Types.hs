@@ -9,13 +9,14 @@ module Platform.Packaging.Types
     , ContainerEnv(..)
     ) where
 
-import "base"         GHC.Generics (Generic)
-import "base"         Data.Semigroup ((<>))
-import "base"         Data.Typeable (Typeable)
-import "base"         Data.Data (Data)
-import "data-default" Data.Default (Default, def)
-import "containers"   Data.Map.Strict (Map, empty)
-import "aeson"        Data.Aeson (ToJSON, FromJSON, toEncoding, genericToEncoding, defaultOptions)
+import "base"             GHC.Generics (Generic)
+import "base"             Data.Semigroup ((<>))
+import "base"             Data.Typeable (Typeable)
+import "base"             Data.Data (Data)
+import "data-default"     Data.Default (Default, def)
+import "containers"       Data.Map.Strict (Map, empty)
+import "aeson"            Data.Aeson (ToJSON, FromJSON, toEncoding, genericToEncoding, defaultOptions)
+import "platform-harness" Platform.Harness.Types (HarnessScript)
 
 data OS
     = Ubuntu
