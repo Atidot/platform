@@ -1,15 +1,21 @@
 from time import sleep
 from datetime import datetime
 import pika
+import .harness as h
 
 def main():
+    if not h.platformCheck():
+        raise Exception("Platform harness not initialized.")
+    host = h.amqpURL()
+    consumer = h.consumers()[0]
+
     connection = pika.BlockingConnection(
-        pika.ConnectionParameters(host='localhost'))
+        pika.ConnectionParameters(host=host))
     try:
         channel = connection.channel()
-        channel.queue_declare(queue='ticks')
+        channel.queue_declare(queue=consumer)
         while True:
-            channel.basic_publish(exchange='', routing_key='ticks', body=timeString())
+            channel.basic_publish(exchange='', routing_key=consumer, body=timeString())
             sleep(1)
     except:
         raise

@@ -3,20 +3,21 @@
 {-# LANGUAGE FlexibleContexts #-}
 module Platform.Harness where
 
-import "base" Data.Foldable (mapM_)
-import "base" Data.Functor ((<&>))
-import "base" Data.Semigroup ((<>))
-import "base" Control.Monad (when)
-import "base" Control.Monad.IO.Class (MonadIO)
-import "text" Data.Text (Text, append, splitOn)
-import "extra" Control.Monad.Extra (whenM)
-import "mtl" Control.Monad.Reader (MonadReader, ask)
-import "exceptions" Control.Monad.Catch (MonadMask, bracket)
-import "turtle" Turtle (Shell)
-import "turtle" Turtle.Prelude (need, export)
+import "base"           Debug.Trace (trace)
+import "base"           Data.Foldable (mapM_)
+import "base"           Data.Functor ((<&>))
+import "base"           Data.Semigroup ((<>))
+import "base"           Control.Monad (when)
+import "base"           Control.Monad.IO.Class (MonadIO)
+import "text"           Data.Text (Text, append, splitOn)
+import "extra"          Control.Monad.Extra (whenM)
+import "mtl"            Control.Monad.Reader (MonadReader, ask)
+import "exceptions"     Control.Monad.Catch (MonadMask, bracket)
+import "turtle"         Turtle (Shell)
+import "turtle"         Turtle.Prelude (need, export)
 import "platform-types" Platform.Types
-import                Platform.Harness.DSL
-import                Platform.Harness.Types
+import                  Platform.Harness.DSL
+import                  Platform.Harness.Types
 
 newtype MessengerProfile = MessengerProfile { _messengerProfile_channelName :: Text }
 data HarnessState
@@ -64,15 +65,15 @@ runHarness config script
         init' = return ()
         fini _ = return ()
         body _ = do
-            mapM_ run $ commands script
+            export "PLATFORM_HARNESS" "1" -- Set this first to see if anything executes
+            trace "made it to the run commands script" $ mapM_ run $ commands script
             export "PLATFORM_AMQP_URL" =<< _harnessState_amqpURL <$> ask
-            export "PLATFORM_HARNESS" "1" -- Set this last to allow detection of partial execution
 
         run :: (MonadIO m, MonadReader HarnessState m, MonadMask m)
             => HarnessCmd
             -> m ()
-        run (Queue queueID) = do
-            undefined
+        run (Queue queueID) = return ()
+
         run (Produce (ContainerID origin)
                      (QueueID dest)
             ) = do

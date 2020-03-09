@@ -29,6 +29,7 @@ library
                      , exceptions
                      , shelly
                      , data-default
+                     , regex-tdfa
                      , text
                      , free
                      , filepath
@@ -60,14 +61,19 @@ executable platform-process
   -- other-modules:
   -- other-extensions:
   build-depends:       base
-                     , bytestring
                      , data-default
+                     , directory
+                     , dockerfile
+                     , exceptions
+                     , lens
                      , mtl
-                     , aeson
+                     , text
                      , shelly
-                     , optparse-applicative
-                     , platform-types
+                     , regex-tdfa
                      , platform-dsl
                      , platform-process
+                     , platform-packaging
+                     , platform-harness
+                     , platform-packaging-types
   hs-source-dirs:      app
   default-language:    Haskell2010

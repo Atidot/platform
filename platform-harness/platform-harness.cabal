@@ -59,6 +59,7 @@ executable platform-harness
                      , bytestring
                      , data-default
                      , directory
+                     , exceptions
                      , extra
                      , aeson
                      , system-filepath

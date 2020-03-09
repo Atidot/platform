@@ -26,12 +26,13 @@ import                            Platform.Packaging.PythonImports
 makeLenses ''ContainerEnv
 
 toDocker :: ContainerEnv -> Docker ()
-toDocker (ContainerEnv os users img preInstallationCmds pkgs environment runCmds entrypoint' command) = do
+toDocker (ContainerEnv os users img preInstallationCmds pkgs environment copyDirs runCmds entrypoint' command) = do
     from img
     mapM_ run                   preInstallationCmds
     mapM_ (uncurry installPkgs) pkgs
     mapM_ (makeUser os)         users
     mapM_ (uncurry env)         (assocs environment)
+    mapM_ (uncurry copy)        copyDirs
     mapM_ run                   runCmds
     maybe (return ()) (flip entrypoint []) entrypoint'
     maybe (return ()) cmd                  command
@@ -70,6 +71,7 @@ testingEnv = ContainerEnv Ubuntu
                           --, "echo \"atidot:atidot\" | chpasswd && adduser atidot sudo"]
                           [("sudo apt-get -y install", ["python3", "python3-pip"])]
                           empty
+                          []
                           []
                           Nothing
                           Nothing

@@ -4,6 +4,8 @@
 }:
 with nixpkgs;
 rec {
+  makeStatic = package: package;
+
   ease = package: with haskell.lib;
     ( doJailbreak
     ( dontHaddock
@@ -39,13 +41,21 @@ rec {
     platform-types           = hspkgs.callCabal2nix "platform-types"           "${platformTypesSrc}" {};
     platform-dsl             = hspkgs.callCabal2nix "platform-dsl"             "${platformDSLSrc}" {};
     platform-aws             = hspkgs.callCabal2nix "platform-aws"             "${platformAWSSrc}" {};
-    platform-harness         = hspkgs.callCabal2nix "platform-harness"         "${platformHarnessSrc}" {};
     platform-kube            = hspkgs.callCabal2nix "platform-kube"            "${platformKubeSrc}" {};
     platform-packaging       = hspkgs.callCabal2nix "platform-packaging"       "${platformPackagingSrc}" {};
     platform-packaging-types = hspkgs.callCabal2nix "platform-packaging-types" "${platformPackagingTypesSrc}" {};
     platform-process         = hspkgs.callCabal2nix "platform-process"         "${platformProcessSrc}" {};
     platform-visual          = hspkgs.callCabal2nix "platform-visual"          "${platformVisualSrc}" {};
     platform-deployment      = hspkgs.callCabal2nix "platform-deployment"      "${platformDeploymentSrc}" {};
+    platform-harness = haskell.lib.overrideCabal (hspkgs.callCabal2nix "platform-harness" "${platformHarnessSrc}" {}) (old: {
+      enableSharedExecutables = false;
+      enableSharedLibraries = false;
+      configureFlags = [
+        "--ghc-option=-optc=-no-pie"
+        "--ghc-option=-optl=-static"
+        "--ghc-option=-optl=-L/usr/lib"
+      ];
+    });
   };
 
   packages = haskellPackages.override (old: {

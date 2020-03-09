@@ -4,6 +4,7 @@
 {-# LANGUAGE LambdaCase #-}
 module Main where
 
+import           "base"                    Debug.Trace (trace)
 import           "base"                    GHC.Generics (Generic)
 import           "base"                    Data.Maybe (fromMaybe, maybe, fromJust)
 import           "base"                    Data.Function ((&))
@@ -11,11 +12,12 @@ import qualified "bytestring"              Data.ByteString.Lazy.Char8 as B8 (Byt
 import           "data-default"            Data.Default (def)
 import           "aeson"                   Data.Aeson (decode, FromJSON)
 import           "text"                    Data.Text as T (Text, pack)
+import           "exceptions"              Control.Monad.Catch (Exception, throwM)
 import           "mtl"                     Control.Monad.Reader (runReaderT)
 import           "optparse-generic"        Options.Generic (getRecord, ParseRecord)
 import           "directory"               System.Directory (doesFileExist)
 import           "extra"                   System.Time.Extra (sleep)
-import           "shelly"                  Shelly hiding (FilePath, sleep)
+import           "shelly"                  Shelly hiding (FilePath, sleep, command, trace)
 import           "platform-types"          Platform.Types
 import           "platform-dsl"            Platform.DSL
 import                                     Platform.Harness
@@ -25,25 +27,37 @@ data CLI
     = CLI
     { entrypoint     :: String
     , entrypointArgs :: [String]
-    , amqpurl        :: String
+    , amqpurl        :: Maybe String
     , inputscript    :: Maybe String
     , scriptopts     :: Maybe String
     } deriving (Generic, Show)
 
 instance ParseRecord CLI where
 
+data HarnessException
+    = NoHostnameException
+    deriving (Show)
+
+instance Exception HarnessException
+
 main :: IO ()
 main = getRecord "Harness" >>= \record -> do
     let opts = fromMaybe def                  $ maybeDecode scriptopts  record ::    HarnessConfig
     script  <- maybe     waitForScript return $ maybeDecode inputscript record :: IO HarnessScript
+    amqpURL <- maybe     waitForAMQP   return $             amqpurl     record :: IO String
+    trace "read from stdin" $ return ()
     hostContainer <- whichContainerAmI
+    trace "figured out the container I am" $ return ()
     runReaderT
         (runHarness opts script)
-        (HarnessState hostContainer (T.pack . amqpurl $ record)) -- TODO: take the ampqurl and the hostcontainer
-                                                                 -- clearly
-    shelly . run_ (fromText . T.pack . entrypoint $ record)
-           . map T.pack
-           $ entrypointArgs record
+        (HarnessState hostContainer $ T.pack amqpURL)
+    trace "made it past runReaderT" $ return ()
+    log <- shelly
+         . run (fromText . T.pack . entrypoint $ record)
+         . map T.pack
+         $ entrypointArgs record
+    trace "executed the command" $ return ()
+    shelly $ writefile (fromText "./log") log
     where
         maybeDecode :: FromJSON b
                     => (CLI -> Maybe String)
@@ -69,4 +83,6 @@ amqpLocation :: FilePath
 amqpLocation = "/etc/platform/amqpserver"
 
 whichContainerAmI :: IO Text
-whichContainerAmI = undefined
+whichContainerAmI = do
+    name <- shelly $ get_env "HOSTNAME"
+    maybe (throwM NoHostnameException) return name

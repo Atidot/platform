@@ -7,23 +7,26 @@
 {-# LANGUAGE BlockArguments #-}
 module Platform.Process where
 
+import           "base"                     Debug.Trace
 import           "base"                     Control.Monad.IO.Class (MonadIO, liftIO)
-import           "base"                     Data.Maybe (fromJust)
+import           "base"                     Data.Maybe (fromJust, fromMaybe, listToMaybe)
 import           "lens"                     Control.Lens
 import           "aeson"                    Data.Aeson (encode)
 import           "bytestring"               Data.ByteString.Lazy.Char8 as B8 (unpack)
 import           "data-default"             Data.Default (Default, def)
 import           "text"                     Data.Text (Text, append, strip)
-import qualified "text"                     Data.Text as T (pack, drop)
+import qualified "text"                     Data.Text as T (unpack, pack, drop, lines)
 import           "mtl"                      Control.Monad.State.Class (MonadState, gets)
-import           "mtl"                      Control.Monad.Writer.Lazy (MonadWriter, runWriterT)
-import           "exceptions"               Control.Monad.Catch (MonadMask, bracket)
+import           "mtl"                      Control.Monad.Writer.Lazy (MonadWriter, tell, runWriterT)
+import           "exceptions"               Control.Monad.Catch (MonadMask, bracket, throwM)
 import           "free"                     Control.Monad.Free
-import           "shelly"                   Shelly (Sh, shelly, fromText, setenv, unlessM, run_)
+import           "regex-tdfa"               Text.Regex.TDFA
+import           "shelly"                   Shelly (Sh, shelly, fromText, writefile, setenv, unlessM, run_)
 import qualified "shelly"                   Shelly as Sh (run, FilePath)
 import           "platform-types"           Platform.Types
 import           "platform-dsl"             Platform.DSL
 import           "platform-harness"         Platform.Harness.Types (HarnessScript(..))
+import qualified "platform-harness"         Platform.Harness.Types as H (HarnessCmd(..))
 import           "platform-packaging"       Platform.Packaging
 import           "platform-packaging-types" Platform.Packaging.Types
 
@@ -53,7 +56,9 @@ runProcess config script
               fini
               body
     where
-        init' = shelly $ startDockerDefault "rabbitmq:latest" "Config" "/etc/platform/"
+        init' = do
+            amqpContainer <- shelly $ startDockerDefault "rabbitmq" "Config" "/etc/platform/"
+            return amqpContainer
         fini _ = return ()
         body amqpContainer = do
             (result, harnessScript) <- runWriterT $ iterM run script
@@ -73,9 +78,20 @@ runProcess config script
             newContainer <- shelly $ startDockerLocal name "Config" "/etc/platform/"
             processState_containers <>= [newContainer]
             return' newContainer
-        run (Queue   _   return') = return'
-        run (Produce _ _ return') = return'
-        run (Consume _ _ return') = return'
+        run (Queue               queueID return') = do
+            tellScript $ H.Queue queueID
+            return'
+        run (Produce containerID queueID return') = do
+            tellScript $ H.Produce containerID queueID
+            return'
+        run (Consume containerID queueID return') = do
+            tellScript $ H.Consume containerID queueID
+            return'
+
+        tellScript :: MonadWriter HarnessScript m
+                   => H.HarnessCmd
+                   -> m ()
+        tellScript = tell . HarnessScript . return
 
 -- These magic functions should be replaced by some image-selection logic
 producerPath :: Text
@@ -100,9 +116,10 @@ copyToDocker :: Text        -- ^ File contents
              -> Text        -- ^ Filepath to copy to
              -> Sh ()       -- ^ The resulting shell action
 copyToDocker s (ContainerID name) fp = do
-    run_ "printf" [s, ">", "./tempfile"]
-    run_ docker ["cp", "./tempfile", name <> ":" <> fp]
-    run_ "rm" ["./tempfile"]
+    writefile (fromText "./tempfile") (s <> "\n")
+    run_ docker ["cp", "-L", "./tempfile", name <> ":" <> fp]
+    --run_ "rm" ["./tempfile"]
+    return ()
 
 docker :: Sh.FilePath
 docker = fromText "/usr/bin/docker"
@@ -111,30 +128,29 @@ docker = fromText "/usr/bin/docker"
 -- this shelly code is not currently error-safe
 startDocker :: [Text] -> Sh ContainerID
 startDocker args = do
-    ContainerID <$> Sh.run docker (["run"] ++ args)
+    ContainerID . firstLine <$> Sh.run docker (["run", "-d"] ++ args)
 
 startDockerWithVolume :: Text           -- ^ Image ID
                       -> Text           -- ^ Volume name
                       -> Text           -- ^ Volume mount location
                       -> Sh ContainerID -- ^ Resulting container ID
 startDockerWithVolume image volume mount
-  = startDocker ["-q", "-v", volume <> ":" <> mount, image]
+  = startDocker ["-v", volume <> ":" <> mount, image]
 
 startDockerDefault :: Text           -- ^ Image name
                    -> Text           -- ^ Volume name
                    -> Text           -- ^ Volume mount location
                    -> Sh ContainerID -- ^ Resulting container ID
 startDockerDefault image vol mount = do
-    run_ docker ["pull", image]
-    imageID <- Sh.run docker ["create", "-q", image]
-    startDockerWithVolume imageID vol mount
+    run_ docker ["image", "pull", image]
+    startDockerWithVolume image vol mount
 
 startDockerLocal :: Text           -- ^ Dockerfile location
                  -> Text           -- ^ Volume name
                  -> Text           -- ^ Volume mount location
                  -> Sh ContainerID -- ^ Resulting container ID
 startDockerLocal dLoc vol mount = do
-    imageIDRaw <- Sh.run docker ["build", "-q", dLoc]
+    imageIDRaw <- firstLine <$> Sh.run docker ["build", "-q", dLoc]
     let imageID = getDockerID imageIDRaw
     startDockerWithVolume imageID vol mount
 
@@ -148,8 +164,12 @@ newPath = "$PATH:/home/atidot/platform/static/testDockers/consumer:/home/atidot/
 
 getContainerURL :: ContainerID -> Sh Text
 getContainerURL (ContainerID id')
-  = Sh.run docker
-           [ "inspect"
-           , "-f"
-           , "'{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}'"
-           , id']
+    = firstLine
+  <$> Sh.run docker
+          [ "inspect"
+          , "-f"
+          , "'{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}'"
+          , id']
+
+firstLine :: Text -> Text
+firstLine = fromMaybe "" . listToMaybe . T.lines

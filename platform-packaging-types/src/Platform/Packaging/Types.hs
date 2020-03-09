@@ -52,6 +52,7 @@ data ContainerEnv
         , _containerEnv_preInstallationCmds :: ![String]
         , _containerEnv_installations :: ![(String, [String])]
         , _containerEnv_env :: !(Map String String)
+        , _containerEnv_copyDirs :: ![([String], String)]
         , _containerEnv_runCmds :: ![String]
         , _containerEnv_entrypoint :: !(Maybe Entrypoint)
         , _containerEnv_command :: !(Maybe [String])
@@ -61,12 +62,13 @@ instance Default ContainerEnv where
     def = ContainerEnv Ubuntu
                        [Root]
                        "ubuntu:latest"
-                       []
-                       []
-                       empty
-                       []
-                       Nothing
-                       Nothing
+                       mempty
+                       mempty
+                       mempty
+                       mempty
+                       mempty
+                       mempty
+                       mempty
 
 instance ToJSON ContainerEnv where
     toEncoding = genericToEncoding defaultOptions
@@ -74,14 +76,15 @@ instance ToJSON ContainerEnv where
 instance FromJSON ContainerEnv where
 
 instance Semigroup ContainerEnv where
-    (<>) (ContainerEnv os1 users1 image1 preinsts1 insts1 env1 runs1 entry1 command1)
-         (ContainerEnv os2 users2 image2 preinsts2 insts2 env2 runs2 entry2 command2)
+    (<>) (ContainerEnv os1 users1 image1 preinsts1 insts1 env1 dirs1 runs1 entry1 command1)
+         (ContainerEnv os2 users2 image2 preinsts2 insts2 env2 dirs2 runs2 entry2 command2)
            = ContainerEnv os2
                           (users1 <> users2)
                           image2
                           (preinsts1 <> preinsts2)
                           (insts1 <> insts2)
                           (env2 <> env1) -- Map prefers the left value
+                          (dirs1 <> dirs2)
                           (runs1 <> runs2)
                           entry2
                           command2
