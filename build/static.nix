@@ -4,7 +4,7 @@
 let
   happySrc = fetchGit {
     url = https://github.com/simonmar/happy;
-    rev = "27596ff0ce0171d485bf96d38943ffc760923c90";
+    rev = "3ea1aa76d9a2e87f23fde830b1e42d62e20c3f4c";
   };
 
   cabal2nixOverlay = self: super:
@@ -13,12 +13,12 @@ let
       };
     };
 
-  staticHaskellNixpkgsSrc = fetchTarball https://github.com/nh2/nixpkgs/archive/d9cc01374235745ea8581174c4335ae9dda86504.tar.gz;
+  staticHaskellNixpkgsSrc = fetchTarball https://github.com/NixOS/nixpkgs/archive/19.09.tar.gz;
   pkgs = (import staticHaskellNixpkgsSrc { config.allowBroken = true; }).pkgsMusl.appendOverlays [cabal2nixOverlay];
 
   staticHaskellNixSrc = fetchGit {
     url = https://github.com/nh2/static-haskell-nix;
-    rev = "b66fee31b10663588cc23dc806a75f393749d30d";
+    rev = "761f34bb4b09dd5838f82782c5e56ebfac4039fb";
   };
 
   surveyPath = staticHaskellNixSrc + "/survey/default.nix";
@@ -59,6 +59,7 @@ let
 
   haskellEnv = haskellPackages.ghcWithPackages (ps: with ps; [
     (buildStatic platform-types)
+    (buildStatic platform-harness)
     (buildStatic platform-dsl)
     (buildStatic platform-aws)
     (buildStatic platform-kube)

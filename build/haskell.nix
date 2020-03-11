@@ -4,12 +4,22 @@
 }:
 with nixpkgs;
 rec {
-  makeStatic = package: package;
-
   ease = package: with haskell.lib;
     ( doJailbreak
     ( dontHaddock
     ( dontCheck
+    ( package
+    ))));
+
+  makeStatic = package: with haskell.lib;
+    ( disableSharedExecutables
+    ( disableSharedLibraries
+    ( nixpkgs.lib.flip appendConfigureFlags
+        [ "--ghc-option=-optl=-static"
+          "--extra-lib-dirs=${pkgs.gmp6.override { withStatic = true; }}/lib"
+          "--extra-lib-dirs=${pkgs.zlib.static}/lib"
+          "--extra-lib-dirs=${pkgs.libffi.overrideAttrs (old: { dontDisableStatic = true; })}/lib"
+        ]
     ( package
     ))));
 
@@ -36,6 +46,7 @@ rec {
 
   projectPackages = hspkgs: {
     language-python          = ease hspkgs.language-python;
+    platform-harness         = makeStatic (hspkgs.callCabal2nix "platform-harness" "${platformHarnessSrc}" {});
     stratosphere             = hspkgs.callCabal2nix "stratosphere"             "${stratosphereSrc}" {};
     terraform-hs             = hspkgs.callCabal2nix "terraform-hs"             "${terraformHsSrc}"  {};
     platform-types           = hspkgs.callCabal2nix "platform-types"           "${platformTypesSrc}" {};
@@ -47,15 +58,6 @@ rec {
     platform-process         = hspkgs.callCabal2nix "platform-process"         "${platformProcessSrc}" {};
     platform-visual          = hspkgs.callCabal2nix "platform-visual"          "${platformVisualSrc}" {};
     platform-deployment      = hspkgs.callCabal2nix "platform-deployment"      "${platformDeploymentSrc}" {};
-    platform-harness = haskell.lib.overrideCabal (hspkgs.callCabal2nix "platform-harness" "${platformHarnessSrc}" {}) (old: {
-      enableSharedExecutables = false;
-      enableSharedLibraries = false;
-      configureFlags = [
-        "--ghc-option=-optc=-no-pie"
-        "--ghc-option=-optl=-static"
-        "--ghc-option=-optl=-L/usr/lib"
-      ];
-    });
   };
 
   packages = haskellPackages.override (old: {
