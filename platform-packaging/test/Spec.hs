@@ -6,6 +6,7 @@ import "base"                     Control.Exception (evaluate)
 import "hspec"                    Test.Hspec
 import "QuickCheck"               Test.QuickCheck
 import "platform-packaging"       Platform.Packaging.PythonImports.Internal.Annotation
+import "platform-packaging"       Platform.Packaging.PythonImports.Internal.PipMatches.Parse
 import "platform-packaging-types" Platform.Packaging.PythonImports.Types
 
 main :: IO ()
@@ -28,3 +29,9 @@ platformPackagingPythonImports = do
             getExplicitPkgOrigins "import keras #!platform Keras" `shouldBe` (Just [kerasPair])
     where
         kerasPair = (ModuleName "keras", PyPkg "https://pypi.org/simple/" "Keras")
+
+--platformPackagingParse :: Spec
+--platformPackagingParse = do
+--    describe "Platform.Packaging.PythonImports.Internal.PipMatches.Parse.setupCfg" $ do
+--        it "fails on this example" undefined --setupCfg x `shouldBe` "whoah horsey"
+--        it "succeeds for a well-formed fully-featured example" undefined --setupCfg x `shouldBe` "good to go"

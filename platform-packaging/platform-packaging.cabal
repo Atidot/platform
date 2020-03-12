@@ -23,7 +23,8 @@ library
                     , Platform.Packaging.PythonImports
                     , Platform.Packaging.PythonImports.Internal.Annotation
                     , Platform.Packaging.PythonImports.Internal.PipMatches
-                    , Platform.Packaging.PythonImports.Internal.PipMatches.Parse
+                    , Platform.Packaging.PythonImports.Internal.PipMatches.ParseSetupCfg
+                    , Platform.Packaging.PythonImports.Internal.PipMatches.ParseStdLibHTML
                     , Platform.Packaging.PythonImports.Internal.Utils
   -- other-extensions:
   build-depends:       base
@@ -40,6 +41,7 @@ library
                      , regex-pcre
                      , shelly
                      , shellmet
+                     , scalpel
                      , dockerfile
                      , mtl
                      , parsec

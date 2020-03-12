@@ -34,7 +34,7 @@ import           "shellmet"                 Shellmet
 import           "platform-packaging-types" Platform.Packaging.Pip.Types
 import           "platform-packaging-types" Platform.Packaging.PythonImports.Types
 import                                      Platform.Packaging.PythonImports.Internal.Utils
-import                                      Platform.Packaging.PythonImports.Internal.PipMatches.Parse (setupCfg)
+import                                      Platform.Packaging.PythonImports.Internal.PipMatches.ParseSetupCfg (setupCfg)
 import                                      Platform.Packaging.Pip
 
 makeLenses ''GeneralOpts

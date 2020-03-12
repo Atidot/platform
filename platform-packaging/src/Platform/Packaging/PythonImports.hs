@@ -11,6 +11,7 @@ module Platform.Packaging.PythonImports
     , containsInit
     ) where
 
+import           "base"                     Debug.Trace (trace)
 import           "base"                     Control.Monad (zipWithM)
 import           "base"                     Control.Monad.IO.Class (MonadIO)
 import           "base"                     Data.Semigroup ((<>))
@@ -50,7 +51,7 @@ runPythonImports fileContents = do
     unmatchedMods <- map dottedToModuleName
                    . getForeignImportNames
                  <$> maybe (throwM FileNotParseable) return (getAST fileContents)
-    let explicitMatches = maybe [] id (getExplicitPkgOrigins fileContents)
+    let explicitMatches = fromMaybe [] $ getExplicitPkgOrigins fileContents
         unmatchedMods'  = unmatchedMods \\ map fst explicitMatches
     possibleMatches <- mapM findPossibleMatches unmatchedMods'
     let possibleMatchesTruncated = map (take 10) possibleMatches --TODO: calibrate this
@@ -64,12 +65,13 @@ run :: (MonadMask m, MonadIO m)
 run [] = (,) <$> fmap _successfulMatches get <*> fmap _failedMatches get
 run ((mn, possibleMatches) : remainder) = do
     s <- get
+    trace (show s) $ return ()
     let previousMatch = find (\pypkg -> fromMaybe False
                                      . fmap (elem mn)
                                      . M.lookup pypkg
                                      $ _foundModules s)
                              possibleMatches
-    maybe searchForMatch recordPreviousMatch previousMatch
+    trace ("Getting matches for " ++ show mn) $ maybe searchForMatch recordPreviousMatch previousMatch
     where
         recordPreviousMatch pkg = do
             put . (successfulMatches <>~ [(mn, pkg)]) =<< get

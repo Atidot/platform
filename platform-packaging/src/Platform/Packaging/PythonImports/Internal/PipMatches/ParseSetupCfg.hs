@@ -1,5 +1,5 @@
 {-# LANGUAGE PackageImports #-}
-module Platform.Packaging.PythonImports.Internal.PipMatches.Parse (setupCfg) where
+module Platform.Packaging.PythonImports.Internal.PipMatches.ParseSetup (setupCfg) where
 
 import "base" Data.Maybe (listToMaybe)
 import "containers" Data.Map.Strict (Map)
