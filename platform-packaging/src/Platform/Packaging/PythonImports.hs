@@ -23,11 +23,13 @@ import           "mtl"                      Control.Monad.State.Lazy
 import           "data-default"             Data.Default (Default, def)
 import           "containers"               Data.Map.Strict (Map, keys)
 import qualified "containers"               Data.Map.Strict as M
-import           "containers"               Data.Set (Set)
+import qualified "containers"               Data.Set as S (fromList, notMember)
+import qualified "text"                     Data.Text as T (pack)
 import           "platform-packaging-types" Platform.Packaging.PythonImports.Types
 import Platform.Packaging.Pip
 import Platform.Packaging.PythonImports.Internal.Annotation
 import Platform.Packaging.PythonImports.Internal.PipMatches
+import Platform.Packaging.PythonImports.Internal.PipMatches.ParseStdLibHTML
 import Platform.Packaging.PythonImports.Internal.Utils
 
 data PythonImportsState
@@ -48,7 +50,11 @@ runPythonImports :: (MonadMask m, MonadIO m)
                  => String
                  -> m ([(ModuleName, PyPkg)], [ModuleName])
 runPythonImports fileContents = do
-    unmatchedMods <- map dottedToModuleName
+    -- The following line is silent if scraper parsing fails--TODO: change
+    stdLibModsRaw <- fromMaybe [] <$> liftIO scrapeModules
+    let stdLibMods = S.fromList $ map (ModuleName . T.pack) stdLibModsRaw
+    unmatchedMods <- filter (\mn -> mn `S.notMember` stdLibMods)
+                   . map dottedToModuleName
                    . getForeignImportNames
                  <$> maybe (throwM FileNotParseable) return (getAST fileContents)
     let explicitMatches = fromMaybe [] $ getExplicitPkgOrigins fileContents

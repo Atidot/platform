@@ -6,7 +6,7 @@ import "base"                     Control.Exception (evaluate)
 import "hspec"                    Test.Hspec
 import "QuickCheck"               Test.QuickCheck
 import "platform-packaging"       Platform.Packaging.PythonImports.Internal.Annotation
-import "platform-packaging"       Platform.Packaging.PythonImports.Internal.PipMatches.Parse
+import "platform-packaging"       Platform.Packaging.PythonImports.Internal.PipMatches.ParseSetupCfg
 import "platform-packaging-types" Platform.Packaging.PythonImports.Types
 
 main :: IO ()
