@@ -5,6 +5,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 module Platform.Packaging.PythonImports.Internal.PipMatches where
 
+import           "base"                     Debug.Trace (trace)
 import           "base"                     Control.Monad.IO.Class (MonadIO, liftIO)
 import           "base"                     Control.Monad (join, when, unless, filterM, zipWithM, sequence_)
 import           "base"                     Data.Typeable (Typeable)
@@ -121,12 +122,11 @@ downloadPkg :: (MonadCatch m, MonadIO m)
             -> m ()
 downloadPkg pkg = do
     liftIO $ download genOpts dlOpts dlInput
-    return ()
+    trace "finished downloading" $ return ()
     where
-        genOpts = set generalOpts_quiet   (Just True) def
-        dlOpts =  set downloadOpts_noDeps (Just True) def
+        genOpts = set generalOpts_verbose (Just True) def
+        dlOpts  = set downloadOpts_noDeps (Just True) def
         dlInput = ReqSpecInput [ReqSpec (_pyPkg_name pkg) Nothing]
-             --  set downloadOpts_index  (Just $ _pyPkg_index pkg) . set downloadOpts_noDeps (Just True) $ def
 
 getPythonFileNameRegex :: String
 getPythonFileNameRegex = "[^\\/]+(?=.py$)"
@@ -180,6 +180,7 @@ wheelAction :: (MonadCatch m, MonadIO m)
             => FilePath
             -> m [ModuleName]
 wheelAction fp = do
+    trace "testing wheel" $ return ()
     originalContents <- liftIO $ listDirectory fp
     let wheelFiles = filter (=~ wheelRegex) originalContents
     wheelFile <- headIfLengthIsOne wheelFiles
@@ -220,6 +221,7 @@ tarAction :: (MonadCatch m, MonadIO m)
              => FilePath
              -> m [ModuleName]
 tarAction fp = do
+    trace "testing tar" $ return ()
     originalContents <- liftIO $ listDirectory fp
     let tarFiles = filter (=~ tarRegex) originalContents
     tarFile <- headIfLengthIsOne tarFiles

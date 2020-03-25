@@ -26,6 +26,7 @@ library
                     , Platform.Packaging.PythonImports.Internal.PipMatches.ParseSetupCfg
                     , Platform.Packaging.PythonImports.Internal.PipMatches.ParseStdLibHTML
                     , Platform.Packaging.PythonImports.Internal.Utils
+                    , Platform.Packaging.PythonImports.Internal.Download
   -- other-extensions:
   build-depends:       base
                      , lens
@@ -42,8 +43,10 @@ library
                      , shelly
                      , shellmet
                      , scalpel
+                     , transformers
                      , dockerfile
                      , mtl
+                     , monad-loops
                      , parsec
                      , temporary
                      , exceptions
