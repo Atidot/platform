@@ -6,6 +6,7 @@
 module Platform.Packaging.Pip
     (install, download, uninstall, freeze, list, pipShow, search, check, config, wheel, hash, debug, UpgradeStrategy, FormatControl, OutputFormat, ProgressBar, HashAlgs, InstallOpts, DownloadOpts, UninstallOpts, FreezeOpts, ListOpts, ShowOpts, SearchOpts, CheckOpts, ConfigOpts, WheelOpts, HashOpts, DebugOpts, PipInput, UninstallInput, ConfigInput) where
 
+import           "base"                     Debug.Trace (trace)
 import           "base"                     Data.Data (Data)
 import           "data-default"             Data.Default (Default, def)
 import           "text"                     Data.Text (Text)
@@ -13,7 +14,7 @@ import qualified "text"                     Data.Text as T
 import           "base"                     Data.Typeable (Typeable)
 import           "base"                     GHC.Generics (Generic)
 import           "regex-pcre"               Text.Regex.PCRE
-import           "shelly"                   Shelly
+import           "shelly"                   Shelly hiding (trace)
 import           "platform-packaging-types" Platform.Packaging.Pip.Types
 import                                      Platform.Packaging.PythonImports.Internal.Download
 
@@ -49,7 +50,8 @@ download :: GeneralOpts
          -> PipInput
          -> IO ()
 download gOpts opts input
-  = shelly
+  = trace "trying to download"
+  . shelly
   . interruptPipDownload
   $ fmtOpts gOpts ++ fmtOpts opts ++ fmtInput input
 
